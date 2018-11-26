@@ -29,8 +29,7 @@ as dependency. Specifically, `yubihsm-setup` expects to find
 
 == License
 
-[source, cfg]
-----
+....
  Copyright 2015-2018 Yubico AB
 
  Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,4 +43,4 @@ as dependency. Specifically, `yubihsm-setup` expects to find
  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  See the License for the specific language governing permissions and
  limitations under the License.
-----
+....
