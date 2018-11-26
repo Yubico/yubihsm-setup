@@ -1,0 +1,47 @@
+= YubiHSM Setup
+
+This tool allows to perform some administrative tasks with a YubiHSM.
+
+The currently supported main functionalities are:
+- Setup a device to use with the YubiHSM KSP for Windows ADCS
+- Dump all the extractable objects from the device given an existing Wrap Key
+- Restore exported object using a matching Wrap Key on a device
+- Reset a device
+
+More info can be found at
+https://developers.yubico.com/YubiHSM2/Component_Reference/yubihsm-setup/.
+
+== Building
+
+To build the tool a normal Rust toolchain is required, stable
+Rust will suffice.
+
+The tools uses the `yubihsmrs` crate, which in turn requires
+`libyubihsm` to be available.
+
+
+=== Note about building
+
+Currently `yubihsmrs` has not been published to crates.io. This means
+that either a local or a git path should be specified when adding it
+as dependency. Specifically, `yubihsm-setup` expects to find
+`yubihsmrs` inside `../yubihsmrs/`.
+
+== License
+
+[source, cfg]
+----
+ Copyright 2015-2018 Yubico AB
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+ http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+----
