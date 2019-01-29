@@ -33,13 +33,16 @@ use regex::Regex;
 
 use std::io;
 use std::io::Write;
+use std::str::FromStr;
 
 use std::error::Error;
 
 use std::fs::File;
 use std::io::prelude::*;
 
-use yubihsmrs::object::{ObjectAlgorithm, ObjectCapability, ObjectDomain, ObjectType};
+use yubihsmrs::object::{
+    AsymmetricKey, ObjectAlgorithm, ObjectCapability, ObjectDomain, ObjectType,
+};
 use yubihsmrs::YubiHsm;
 
 use clap::{App, AppSettings, Arg, SubCommand};
@@ -47,6 +50,24 @@ use clap::{App, AppSettings, Arg, SubCommand};
 use scan_dir::ScanDir;
 
 const WRAPKEY_LEN: usize = 32;
+
+const EJBCA_ATTESTATION_TEMPLATE: &str =
+    "MIIC+jCCAeKgAwIBAgIGAWbt9mc3MA0GCSqGSIb3DQEBBQUAMD4xPDA6BgNVBAMM\
+     M0R1bW15IGNlcnRpZmljYXRlIGNyZWF0ZWQgYnkgYSBDRVNlQ29yZSBhcHBsaWNh\
+     dGlvbjAeFw0xODExMDcxMTM3MjBaFw00ODEwMzExMTM3MjBaMD4xPDA6BgNVBAMM\
+     M0R1bW15IGNlcnRpZmljYXRlIGNyZWF0ZWQgYnkgYSBDRVNlQ29yZSBhcHBsaWNh\
+     dGlvbjCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMTxMBMtwHJCzNHi\
+     d0GszdXM49jQdEZOuaLK1hyIjpuhRImJYbdvmF5cYa2suR2yw6DygWGFLafqVEuL\
+     dXvnib3r0jBX2w7ZSrPWuJ592QUgNllHCvNG/dNgwLfCVOr9fs1ifJaa09gtQ2EG\
+     3iV7j3AMxb7rc8x4d3nsJad+UPCyqB3HXGDRLbOT38zI72zhXm4BqiCMt6+2rcPE\
+     +nneNiTMVjrGwzbZkCak6xnwq8/tLTtvD0+yPLQdKb4NaQfXPmYNTrzTmvYmVD8P\
+     0bIUo/CoXIh0BkJXwHzX7J9nDW9Qd7BR2Q2vbUaou/STlWQooqoTnVnEK8zvAXkl\
+     ubqSUPMCAwEAATANBgkqhkiG9w0BAQUFAAOCAQEAGXwmRWewOcbPV/Jx6wkNDOvE\
+     oo4bieBqeRyU/XfDYbuevfNSBnbQktThl1pR21hrJ2l9qV3D1AJDKck/x74hyjl9\
+     mh37eqbPAdfx3yY7vN03RYWr12fW0kLJA9bsm0jYdJN4BHV/zCXlSqPS0The+Zfg\
+     eVCiQCnEZx/z1jfxwIIg6N8Y7luPWIi36XsGqI75IhkJFw8Jup5HIB4p4P0txinm\
+     hxzAwAjKm7yCiBA5oxX1fvSPdlwMb9mcO7qC5wKrsMyuzIpllBbGaCRFCcAtu9Zu\
+     MvBJNrMLPK3bz4QvT5dYW/cXcjJbnIDqQKqSVV6feYk3iyS07HkaPGP3rxGpdQ==";
 
 lazy_static! {
     static ref SHARE_RE: Regex = Regex::new(r"^\d-\d-[a-zA-Z0-9+/]{70}$").unwrap();
@@ -238,6 +259,15 @@ fn object_to_file(id: u16, data: &[u8]) -> Result<String, String> {
     }
 }
 
+fn delete_object(session: &yubihsmrs::Session, object_id: u16, object_type: ObjectType) {
+    session
+        .delete_object(object_id, object_type)
+        .unwrap_or_else(|err| {
+            println!("Unable to delete object 0x{:04x}: {}", object_id, err);
+            std::process::exit(1);
+        });
+}
+
 fn split_wrapkey(
     wrap_id: u16,
     domains: &[ObjectDomain],
@@ -408,15 +438,7 @@ fn delete_previous_authkey_maybe(
     delete: bool,
 ) {
     if delete {
-        session
-            .delete_object(previous_auth_id, ObjectType::AuthenticationKey)
-            .unwrap_or_else(|err| {
-                println!(
-                    "Unable to delete object 0x{:04x} key: {}",
-                    previous_auth_id, err
-                );
-                std::process::exit(1);
-            });
+        delete_object(session, previous_auth_id, ObjectType::AuthenticationKey);
         println!(
             "Previous authentication key 0x{:04x} deleted",
             previous_auth_id
@@ -705,6 +727,144 @@ fn dump_objects(session: &yubihsmrs::Session) {
     }
 }
 
+fn get_key_algorithm(prompt: &str) -> ObjectAlgorithm {
+    let supported_algorithms = [
+        "rsa2048".to_string(),
+        "rsa3072".to_string(),
+        "rsa4096".to_string(),
+        "ecp224".to_string(),
+        "ecp256".to_string(),
+        "ecp384".to_string(),
+        "ecp521".to_string(),
+        "ecbp256".to_string(),
+        "ecbp384".to_string(),
+        "ecbp512".to_string(),
+        "eck256".to_string(),
+    ];
+
+    println!(
+        "Supported asymmetric key algorithms: {:#?}",
+        supported_algorithms
+    );
+
+    let mut algo = get_string(prompt);
+    while !supported_algorithms.contains(&algo) {
+        println!("Unsupported algorithm. Please try again");
+        algo = get_string(prompt);
+    }
+    ObjectAlgorithm::from_str(&algo).unwrap_or_else(|_err| {
+        println!("Unsupported algorithm. Please try again");
+        get_key_algorithm(prompt)
+    })
+}
+
+fn generate_keypair(
+    session: &yubihsmrs::Session,
+    label: &str,
+    capabilities: &[ObjectCapability],
+    domains: &[ObjectDomain],
+    key_algorithm: ObjectAlgorithm,
+) -> AsymmetricKey {
+    let key = session
+        .generate_asymmetric_key(&label, capabilities, domains, key_algorithm)
+        .unwrap_or_else(|err| {
+            println!("Unable to generate keypair: {}", err);
+            std::process::exit(1);
+        });
+
+    key
+}
+
+fn import_certificate(
+    session: &yubihsmrs::Session,
+    key_id: u16,
+    label: &str,
+    domains: &[ObjectDomain],
+    capabilities: &[ObjectCapability],
+    cert: &[u8],
+) -> u16 {
+    let cert_object = session
+        .import_opaque(
+            key_id,
+            &label,
+            domains,
+            capabilities,
+            ObjectAlgorithm::OpaqueX509Certificate,
+            cert,
+        ).unwrap_or_else(|err| {
+            println!("Unable to import certificate: {}", err);
+            std::process::exit(1);
+        });
+    cert_object.get_id()
+}
+
+fn generate_selfsigned_certificate(session: &yubihsmrs::Session, key: AsymmetricKey) -> Vec<u8> {
+    let selfsigned_certificate = key
+        .sign_attestation_certificate(key.get_key_id(), session)
+        .unwrap_or_else(|err| {
+            println!("Unable to generate a self signed certificate: {}", err);
+            std::process::exit(1);
+        });
+    selfsigned_certificate
+}
+
+fn setup_ejbca(session: &yubihsmrs::Session) {
+    // Generate asymmetric keypair on the device
+    let key_algorithm = get_key_algorithm("Enter asymmetric key algorithm:");
+    let label = get_string("Enter key label:");
+    let domains = get_domains("Enter domains:");
+
+    let key_capabilities;
+    if ObjectAlgorithm::is_rsa(key_algorithm) {
+        key_capabilities = vec![
+            ObjectCapability::SignPkcs,
+            ObjectCapability::SignPss,
+            ObjectCapability::SignAttestationCertificate,
+        ];
+    } else {
+        key_capabilities = vec![
+            ObjectCapability::SignEcdsa,
+            ObjectCapability::SignAttestationCertificate,
+        ];
+    }
+
+    let key = generate_keypair(session, &label, &key_capabilities, &domains, key_algorithm);
+    let key_id = key.get_key_id();
+    println!(
+        "Generated asymmetric keypair with ID 0x{:04x} on the device",
+        key_id
+    );
+
+    // Import attestation certificate template into the device
+    let cert = base64::decode(EJBCA_ATTESTATION_TEMPLATE).unwrap();
+    let cert_id = import_certificate(session, key_id, &label, &domains, &[], &cert);
+    if cert_id != key_id {
+        println!("Failed to store the attestation certificate template with the same ID as the asymmetric key");
+        delete_object(session, key_id, ObjectType::AsymmetricKey);
+        delete_object(session, cert_id, ObjectType::Opaque);
+        std::process::exit(1);
+    }
+
+    // Generate self signed certificate for the asymmetric key
+    let selfsigned_cert = generate_selfsigned_certificate(session, key);
+
+    // Delete the attestation template certificate from the device
+    delete_object(session, cert_id, ObjectType::Opaque);
+
+    // Import the self signed certificate into the device
+    let cert_id = import_certificate(session, key_id, &label, &domains, &[], &selfsigned_cert);
+    if cert_id != key_id {
+        println!("Failed to store the attestation certificate template with the same ID as the asymmetric key");
+        delete_object(session, key_id, ObjectType::AsymmetricKey);
+        delete_object(session, cert_id, ObjectType::Opaque);
+        std::process::exit(1);
+    }
+    println!(
+        "Stored selfsigned certificate with ID 0x{:04x} on the device",
+        cert_id
+    );
+}
+
 fn main() {
     let matches = App::new(env!("CARGO_PKG_NAME"))
         .version(crate_version!())
@@ -712,6 +872,7 @@ fn main() {
         .setting(AppSettings::SubcommandRequired)
         .subcommands(vec![
             SubCommand::with_name("ksp").about("Setup for ADCS usage"),
+            SubCommand::with_name("ejbca").about("Setup for EJBCA usage"),
             SubCommand::with_name("dump").about("Dump wrapped objects"),
             SubCommand::with_name("restore").about("Restore or setup additional devices"),
             SubCommand::with_name("reset")
@@ -722,8 +883,7 @@ fn main() {
                         .short("f")
                         .help("Do not ask for confirmation during reset"),
                 ),
-        ])
-        .arg(
+        ]).arg(
             Arg::with_name("authkey")
                 .long("authkey")
                 .short("k")
@@ -732,15 +892,13 @@ fn main() {
                 .takes_value(true)
                 .hide_default_value(false)
                 .validator(is_valid_id),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("password")
                 .long("password")
                 .short("p")
                 .help("Password to open a session with the device")
                 .takes_value(true),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("connector")
                 .long("connector")
                 .short("c")
@@ -748,26 +906,22 @@ fn main() {
                 .default_value("http://127.0.0.1:12345")
                 .takes_value(true)
                 .hide_default_value(false),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("no-delete")
                 .long("no-delete")
                 .short("d")
                 .help("Do not delete the authentication key when done"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("no-export")
                 .long("no-export")
                 .short("e")
                 .help("Do not export under wrap the application objects"), // TODO(adma): should this also drop capabilities?
-        )
-        .arg(
+        ).arg(
             Arg::with_name("verbose")
                 .long("verbose")
                 .short("v")
                 .help("Produce more debug output"),
-        )
-        .get_matches();
+        ).get_matches();
 
     let connector = matches.value_of("connector").unwrap();
     let authkey = parse_id(matches.value_of("authkey").unwrap()).unwrap();
@@ -808,6 +962,7 @@ fn main() {
             !matches.is_present("no-delete"),
             !matches.is_present("no-export"),
         ),
+        Some("ejbca") => setup_ejbca(&session),
         Some("dump") => dump_objects(&session),
         Some("reset") => reset_device(
             &session,
