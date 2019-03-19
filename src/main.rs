@@ -244,8 +244,8 @@ fn get_threshold_and_shares() -> (u32, u32) {
     }
 }
 
-fn object_to_file(id: u16, data: &[u8]) -> Result<String, String> {
-    let path_string = format!("./0x{:04x}.yhw", id);
+fn object_to_file(id: u16, object_type: ObjectType, data: &[u8]) -> Result<String, String> {
+    let path_string = format!("./0x{:04x}-{:?}.yhw", id, object_type);
     let path = std::path::Path::new(&path_string);
 
     let mut file = match std::fs::File::create(&path) {
@@ -386,48 +386,26 @@ fn recover_wrapkey() -> (
 
 fn add_audit_key_maybe(
     session: &yubihsmrs::Session,
-    wrap_id: u16,
+	label: &str,
     domains: &[yubihsmrs::object::ObjectDomain],
+    wrap_id: u16,
     export: bool,
 ) {
-    if Into::<bool>::into(get_boolean_answer("Would you like to create an audit key?")) {
-        let audit_id = get_integer("Enter audit key ID (0 to choose automatically):", true);
-        let audit_password = get_string("Enter audit authentication key password:");
+    if Into::<bool>::into(get_boolean_answer("Would you like to create an audit authentication key?")) {
+	
+	    let capabilities = vec![
+        	ObjectCapability::GetLogEntries,
+            ObjectCapability::ExportableUnderWrap,
+	    ];
 
-        // Create audit auth key
-        let audit_id = session
-            .import_authentication_key(
-                audit_id,
-                "Audit auth key",
-                domains,
-                &[
-                    ObjectCapability::GetLogEntries,
-                    ObjectCapability::ExportableUnderWrap,
-                ],
-                &[],
-                audit_password.as_bytes(),
-            ).unwrap_or_else(|err| {
-                println!("Unable to import audit key: {}", err);
-                std::process::exit(1);
-            });
-        println!(
+		let audit_id = create_authentication_key(session, &label, &domains, &capabilities, &[]);
+		println!(
             "Stored audit authentication key with ID 0x{:04x} on the device",
             audit_id
         );
 
         if export {
-            let audit_wrapped = session
-                .export_wrapped(wrap_id, ObjectType::AuthenticationKey, audit_id)
-                .unwrap_or_else(|err| {
-                    println!("Unable to export audit authentication key: {}", err);
-                    std::process::exit(1);
-                });
-
-            let audit_file = object_to_file(audit_id, &audit_wrapped).unwrap_or_else(|err| {
-                println!("Unable to save exported audit authentication key: {}", err);
-                std::process::exit(1);
-            });
-            println!("Saved wrapped audit authentication key to {}\n", audit_file);
+			export_wrapped(session, wrap_id, audit_id, ObjectType::AuthenticationKey);
         }
     }
 }
@@ -451,13 +429,100 @@ fn delete_previous_authkey_maybe(
     }
 }
 
-fn setup_ksp(session: &yubihsmrs::Session, previous_auth_id: u16, delete: bool, export: bool) {
-    let capabilities_rsa_decrypt = &[ObjectCapability::DecryptPkcs, ObjectCapability::DecryptOaep];
-
+fn create_wrap_key(session: &yubihsmrs::Session, label: &str, domains: &[ObjectDomain], wrapkey_delegated: &[ObjectCapability]) -> u16 {
+	
     let &wrapkey_capabilities = &[
         ObjectCapability::ImportWrapped,
         ObjectCapability::ExportWrapped,
     ];
+	
+	let wrapkey = session.get_random(WRAPKEY_LEN).unwrap_or_else(|err| {
+        println!("Unable to generate random data: {}", err);
+        std::process::exit(1);
+    });
+
+    // Create a wrapping key for importing application authentication keys and secrets
+    let wrap_id = get_integer("Enter wrap key ID (0 to choose automatically):", true);
+    let wrap_id = session
+        .import_wrap_key(
+            wrap_id,
+            &label,
+            &domains,
+            &wrapkey_capabilities,
+            ObjectAlgorithm::Aes256CcmWrap,
+            &wrapkey_delegated,
+            &wrapkey,
+        ).unwrap_or_else(|err| {
+            println!("Unable to import wrap key: {}", err);
+            std::process::exit(1);
+        });
+    println!("Stored wrap key with ID 0x{:04x} on the device\n", wrap_id);
+
+    // Split the wrap key
+    let (threshold, shares) = get_threshold_and_shares();
+    split_wrapkey(
+        wrap_id,
+        &domains,
+        &wrapkey_capabilities,
+        &wrapkey_delegated,
+        &wrapkey,
+        threshold,
+        shares,
+    );
+
+	wrap_id
+}
+
+fn create_authentication_key(session: &yubihsmrs::Session, label: &str, domains: &[ObjectDomain], authkey_capabilities: &[ObjectCapability], authkey_delegated: &[ObjectCapability]) -> u16 {
+    let auth_id = get_integer(
+        "Enter key ID (0 to choose automatically):",
+        true,
+    );
+    let application_password = get_string("Enter authentication key password:");
+    let auth_id = session
+        .import_authentication_key(
+            auth_id,
+            &label,
+            &domains,
+            &authkey_capabilities,
+            &authkey_delegated,
+            application_password.as_bytes(),
+        ).unwrap_or_else(|err| {
+            println!("Unable to import key: {}", err);
+            std::process::exit(1);
+        });
+	auth_id
+}
+
+fn export_wrapped(session: &yubihsmrs::Session, wrap_id:u16, object_id:u16, object_type:ObjectType) {
+	
+	if wrap_id != 0 {
+		let wrapped = session
+            .export_wrapped(wrap_id, object_type, object_id)
+            .unwrap_or_else(|err| {
+                println!("Unable to export key with ID 0x{:04x}: {}", object_id, err);
+                std::process::exit(1);
+            });
+
+        let file = object_to_file(object_id, object_type, &wrapped).unwrap_or_else(|err| {
+            println!(
+                "Unable to save exported key: {}",
+                err
+            );
+            std::process::exit(1);
+        });
+        println!(
+            "Saved wrapped object 0x{:04x} to {}\n",
+            object_id,
+			file
+        );
+	} else {
+		println!("No wrap key ID was found. Not exporting object");
+	}
+}
+
+fn setup_ksp(session: &yubihsmrs::Session, previous_auth_id: u16, delete: bool, export: bool) {
+    let capabilities_rsa_decrypt = &[ObjectCapability::DecryptPkcs, ObjectCapability::DecryptOaep];
 
     let mut wrapkey_delegated = vec![
         ObjectCapability::GenerateAsymmetricKey,
@@ -493,88 +558,25 @@ fn setup_ksp(session: &yubihsmrs::Session, previous_auth_id: u16, delete: bool, 
         authkey_delegated.extend_from_slice(capabilities_rsa_decrypt);
     }
 
-    let wrapkey = session.get_random(WRAPKEY_LEN).unwrap_or_else(|err| {
-        println!("Unable to generate random data: {}", err);
-        std::process::exit(1);
-    });
-
     let domains = get_domains("Enter domains:");
     println!("Using domains: {:#?}", domains);
 
     // Create a wrapping key for importing application authentication keys and secrets
-    let wrap_id = get_integer("Enter wrap key ID (0 to choose automatically):", true);
-    let wrap_id = session
-        .import_wrap_key(
-            wrap_id,
-            "Wrap key",
-            &domains,
-            &wrapkey_capabilities,
-            ObjectAlgorithm::Aes256CcmWrap,
-            &wrapkey_delegated,
-            &wrapkey,
-        ).unwrap_or_else(|err| {
-            println!("Unable to import wrap key: {}", err);
-            std::process::exit(1);
-        });
-    println!("Stored wrap key with ID 0x{:04x} on the device\n", wrap_id);
-
-    // Split the wrap key
-    let (threshold, shares) = get_threshold_and_shares();
-    split_wrapkey(
-        wrap_id,
-        &domains,
-        &wrapkey_capabilities,
-        &wrapkey_delegated,
-        &wrapkey,
-        threshold,
-        shares,
-    );
+	let wrap_id = create_wrap_key(session, "Wrap key", &domains, &wrapkey_delegated);
 
     // Create an authentication key for usage with the above wrap key
-    let auth_id = get_integer(
-        "Enter application authentication key ID (0 to choose automatically):",
-        true,
-    );
-    let application_password = get_string("Enter application authentication key password:");
-    let auth_id = session
-        .import_authentication_key(
-            auth_id,
-            "Application auth key",
-            &domains,
-            &authkey_capabilities,
-            &authkey_delegated,
-            application_password.as_bytes(),
-        ).unwrap_or_else(|err| {
-            println!("Unable to import application authentication key: {}", err);
-            std::process::exit(1);
-        });
-    println!(
+	print!("Creating application authentication key. ");
+	let auth_id = create_authentication_key(session, "Application auth key", &domains, &authkey_capabilities, &authkey_delegated);
+	println!(
         "Stored application authentication key with ID 0x{:04x} on the device",
         auth_id
     );
 
     if export {
-        let auth_wrapped = session
-            .export_wrapped(wrap_id, ObjectType::AuthenticationKey, auth_id)
-            .unwrap_or_else(|err| {
-                println!("Unable to export application authentication key: {}", err);
-                std::process::exit(1);
-            });
-
-        let auth_file = object_to_file(auth_id, &auth_wrapped).unwrap_or_else(|err| {
-            println!(
-                "Unable to save exported application authentication key: {}",
-                err
-            );
-            std::process::exit(1);
-        });
-        println!(
-            "Saved wrapped application authentication key to {}\n",
-            auth_file
-        );
+		export_wrapped(session, wrap_id, auth_id, ObjectType::AuthenticationKey);
     }
 
-    add_audit_key_maybe(session, wrap_id, &domains, export);
+    add_audit_key_maybe(session, "Application audit key", &domains, wrap_id, export);
 
     delete_previous_authkey_maybe(session, previous_auth_id, delete);
 }
@@ -649,7 +651,7 @@ fn restore_device(session: &yubihsmrs::Session, previous_auth_id: u16, delete: b
     for f in files {
         println!("reading {}", &f.display());
         let mut file = File::open(&f).unwrap_or_else(|err| {
-            println!("Unable to import read file {}: {}", f.display(), err);
+            println!("Unable to read file {}: {}", f.display(), err);
             std::process::exit(1);
         });
 
@@ -710,7 +712,7 @@ fn dump_objects(session: &yubihsmrs::Session) {
 
         match wrap_result {
             Ok(bytes) => {
-                let filename = object_to_file(object.object_id, &bytes).unwrap_or_else(|err| {
+                let filename = object_to_file(object.object_id, object.object_type, &bytes).unwrap_or_else(|err| {
                     println!("Unable to save wrapped object: {}", err);
                     std::process::exit(1);
                 });
@@ -808,8 +810,7 @@ fn generate_selfsigned_certificate(session: &yubihsmrs::Session, key: Asymmetric
     selfsigned_certificate
 }
 
-fn setup_ejbca(session: &yubihsmrs::Session) {
-    // Generate asymmetric keypair on the device
+fn setup_ejbca(session: &yubihsmrs::Session, previous_auth_id: u16, delete: bool, export:bool) {
     let key_algorithm = get_key_algorithm("Enter asymmetric key algorithm:");
     let label = get_string("Enter key label:");
     let domains = get_domains("Enter domains:");
@@ -820,14 +821,17 @@ fn setup_ejbca(session: &yubihsmrs::Session) {
             ObjectCapability::SignPkcs,
             ObjectCapability::SignPss,
             ObjectCapability::SignAttestationCertificate,
+			ObjectCapability::ExportableUnderWrap,
         ];
     } else {
         key_capabilities = vec![
             ObjectCapability::SignEcdsa,
             ObjectCapability::SignAttestationCertificate,
+			ObjectCapability::ExportableUnderWrap,
         ];
     }
 
+    // Generate asymmetric keypair on the device
     let key = generate_keypair(session, &label, &key_capabilities, &domains, key_algorithm);
     let key_id = key.get_key_id();
     println!(
@@ -852,7 +856,7 @@ fn setup_ejbca(session: &yubihsmrs::Session) {
     delete_object(session, cert_id, ObjectType::Opaque);
 
     // Import the self signed certificate into the device
-    let cert_id = import_certificate(session, key_id, &label, &domains, &[], &selfsigned_cert);
+    let cert_id = import_certificate(session, key_id, &label, &domains, &[ObjectCapability::ExportableUnderWrap], &selfsigned_cert);
     if cert_id != key_id {
         println!("Failed to store the attestation certificate template with the same ID as the asymmetric key");
         delete_object(session, key_id, ObjectType::AsymmetricKey);
@@ -863,6 +867,67 @@ fn setup_ejbca(session: &yubihsmrs::Session) {
         "Stored selfsigned certificate with ID 0x{:04x} on the device",
         cert_id
     );
+
+	let mut wrap_id = 0;
+
+	// Create a wrap key if desired and export the asymmetric key under wrap
+	if Into::<bool>::into(get_boolean_answer("Would you like to create a wrap key?")) {
+
+    	let wrapkey_delegated = vec![
+        	ObjectCapability::GetLogEntries,
+			ObjectCapability::GenerateAsymmetricKey,
+			ObjectCapability::ImportWrapped,
+			ObjectCapability::ExportWrapped,
+            ObjectCapability::SignPkcs,
+            ObjectCapability::SignPss,
+			ObjectCapability::SignEcdsa,
+            ObjectCapability::SignAttestationCertificate,
+			ObjectCapability::ExportableUnderWrap,
+    	];
+
+		wrap_id = create_wrap_key(session, "EJBCA Wrap key", &domains, &wrapkey_delegated);
+
+    	if export {
+			export_wrapped(session, wrap_id, key_id, ObjectType::AsymmetricKey);
+			export_wrapped(session, wrap_id, cert_id, ObjectType::Opaque);
+    	}
+	}
+	
+	// Create audit key if desired and export it under wrap
+	add_audit_key_maybe(session, "EJBCA audit key", &domains, wrap_id, export);
+	
+	// Create a new authentication key to replace the current one if desired and export it under wrap
+	if Into::<bool>::into(get_boolean_answer("Would you like to replace the current authentication key? The new athentication key will be active within the domains entered above")) {
+
+	    let authkey_capabilities = vec![
+	        ObjectCapability::GenerateAsymmetricKey,
+			ObjectCapability::ImportWrapped,
+			ObjectCapability::ExportWrapped,
+            ObjectCapability::SignPkcs,
+            ObjectCapability::SignPss,
+			ObjectCapability::SignEcdsa,
+            ObjectCapability::SignAttestationCertificate,
+			ObjectCapability::ExportableUnderWrap,
+			ObjectCapability::GetLogEntries,
+	    ];
+	    let mut authkey_delegated = vec![
+        	ObjectCapability::GetLogEntries,
+	    ];
+		authkey_delegated.extend_from_slice(&authkey_capabilities);
+	
+		let auth_id = create_authentication_key(session, "EJBCA auth key", &domains, &authkey_capabilities, &authkey_delegated);
+		println!(
+	        "Stored EJBCA authentication key with ID 0x{:04x} on the device",
+	        auth_id
+	    );
+
+		if export {
+			export_wrapped(session, wrap_id, auth_id, ObjectType::AuthenticationKey);
+    	}
+
+		delete_previous_authkey_maybe(session, previous_auth_id, delete);
+	}
+
 }
 
 fn main() {
@@ -962,7 +1027,12 @@ fn main() {
             !matches.is_present("no-delete"),
             !matches.is_present("no-export"),
         ),
-        Some("ejbca") => setup_ejbca(&session),
+        Some("ejbca") => setup_ejbca(
+			&session, 
+            authkey,
+            !matches.is_present("no-delete"),
+            !matches.is_present("no-export"),
+		),
         Some("dump") => dump_objects(&session),
         Some("reset") => reset_device(
             &session,
