@@ -546,6 +546,7 @@ fn init_setup(
                 );
                 std::process::exit(1);
             });
+
         println!(
             "Saved wrapped application authentication key to {}\n",
             auth_file
@@ -747,6 +748,7 @@ fn dump_objects(session: &yubihsmrs::Session) {
                         println!("Unable to save wrapped object: {}", err);
                         std::process::exit(1);
                     });
+
                 println!(
                     "Successfully exported object {:?} with ID 0x{:04x} to {}",
                     object.object_type, object.object_id, filename
@@ -1030,6 +1032,7 @@ fn main() {
                 .long("no-new-authkey")
                 .short("a")
                 .help("Use this flag if you want to generate an asymmetric key and self-signed certificate on the YubiHSM for use with EJBCA"),
+
         ).arg(
             Arg::with_name("verbose")
                 .long("verbose")
