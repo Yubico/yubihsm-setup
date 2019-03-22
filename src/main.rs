@@ -244,8 +244,8 @@ fn get_threshold_and_shares() -> (u32, u32) {
     }
 }
 
-fn object_to_file(id: u16, data: &[u8]) -> Result<String, String> {
-    let path_string = format!("./0x{:04x}.yhw", id);
+fn object_to_file(id: u16, object_type: ObjectType, data: &[u8]) -> Result<String, String> {
+    let path_string = format!("./0x{:04x}-{}.yhw", id, object_type);
     let path = std::path::Path::new(&path_string);
 
     let mut file = match std::fs::File::create(&path) {
@@ -423,7 +423,7 @@ fn add_audit_key_maybe(
                     std::process::exit(1);
                 });
 
-            let audit_file = object_to_file(audit_id, &audit_wrapped).unwrap_or_else(|err| {
+            let audit_file = object_to_file(audit_id, ObjectType::AuthenticationKey, &audit_wrapped).unwrap_or_else(|err| {
                 println!("Unable to save exported audit authentication key: {}", err);
                 std::process::exit(1);
             });
@@ -451,49 +451,22 @@ fn delete_previous_authkey_maybe(
     }
 }
 
-fn setup_ksp(session: &yubihsmrs::Session, previous_auth_id: u16, delete: bool, export: bool) {
-    let capabilities_rsa_decrypt = &[ObjectCapability::DecryptPkcs, ObjectCapability::DecryptOaep];
-
-    let &wrapkey_capabilities = &[
+fn init_setup(
+		session: &yubihsmrs::Session, 
+		previous_auth_id: u16, 
+		delete: bool, 
+		export: bool, 
+		wrapkey_delegated: &[ObjectCapability],  
+		authkey_capabilities: &[ObjectCapability], 
+		authkey_delegated: &[ObjectCapability]
+) {
+					
+	let &wrapkey_capabilities = &[
         ObjectCapability::ImportWrapped,
         ObjectCapability::ExportWrapped,
-    ];
-
-    let mut wrapkey_delegated = vec![
-        ObjectCapability::GenerateAsymmetricKey,
-        ObjectCapability::SignPkcs,
-        ObjectCapability::SignPss,
-        ObjectCapability::ImportWrapped,
-        ObjectCapability::ExportWrapped,
-        ObjectCapability::ExportableUnderWrap,
-        ObjectCapability::GetLogEntries,
-    ];
-
-    let mut authkey_capabilities = vec![
-        ObjectCapability::GenerateAsymmetricKey,
-        ObjectCapability::SignPkcs,
-        ObjectCapability::SignPss,
-        ObjectCapability::ImportWrapped,
-        ObjectCapability::ExportWrapped,
-        ObjectCapability::ExportableUnderWrap,
-    ];
-
-    let mut authkey_delegated = vec![
-        ObjectCapability::GenerateAsymmetricKey,
-        ObjectCapability::SignPkcs,
-        ObjectCapability::SignPss,
-        ObjectCapability::ExportableUnderWrap,
-    ];
-
-    if Into::<bool>::into(get_boolean_answer(
-        "Would you like to add RSA decryption capabilities?",
-    )) {
-        wrapkey_delegated.extend_from_slice(capabilities_rsa_decrypt);
-        authkey_capabilities.extend_from_slice(capabilities_rsa_decrypt);
-        authkey_delegated.extend_from_slice(capabilities_rsa_decrypt);
-    }
-
-    let wrapkey = session.get_random(WRAPKEY_LEN).unwrap_or_else(|err| {
+    ];				
+					
+	let wrapkey = session.get_random(WRAPKEY_LEN).unwrap_or_else(|err| {
         println!("Unable to generate random data: {}", err);
         std::process::exit(1);
     });
@@ -561,7 +534,7 @@ fn setup_ksp(session: &yubihsmrs::Session, previous_auth_id: u16, delete: bool, 
                 std::process::exit(1);
             });
 
-        let auth_file = object_to_file(auth_id, &auth_wrapped).unwrap_or_else(|err| {
+        let auth_file = object_to_file(auth_id, ObjectType::AuthenticationKey, &auth_wrapped).unwrap_or_else(|err| {
             println!(
                 "Unable to save exported application authentication key: {}",
                 err
@@ -577,6 +550,47 @@ fn setup_ksp(session: &yubihsmrs::Session, previous_auth_id: u16, delete: bool, 
     add_audit_key_maybe(session, wrap_id, &domains, export);
 
     delete_previous_authkey_maybe(session, previous_auth_id, delete);
+}
+
+fn setup_ksp(session: &yubihsmrs::Session, previous_auth_id: u16, delete: bool, export: bool) {
+    let capabilities_rsa_decrypt = &[ObjectCapability::DecryptPkcs, ObjectCapability::DecryptOaep];
+
+    let mut wrapkey_delegated = vec![
+        ObjectCapability::GenerateAsymmetricKey,
+        ObjectCapability::SignPkcs,
+        ObjectCapability::SignPss,
+        ObjectCapability::ImportWrapped,
+        ObjectCapability::ExportWrapped,
+        ObjectCapability::ExportableUnderWrap,
+        ObjectCapability::GetLogEntries,
+    ];
+
+    let mut authkey_capabilities = vec![
+        ObjectCapability::GenerateAsymmetricKey,
+        ObjectCapability::SignPkcs,
+        ObjectCapability::SignPss,
+        ObjectCapability::ImportWrapped,
+        ObjectCapability::ExportWrapped,
+        ObjectCapability::ExportableUnderWrap,
+    ];
+
+    let mut authkey_delegated = vec![
+        ObjectCapability::GenerateAsymmetricKey,
+        ObjectCapability::SignPkcs,
+        ObjectCapability::SignPss,
+        ObjectCapability::ExportableUnderWrap,
+    ];
+
+    if Into::<bool>::into(get_boolean_answer(
+        "Would you like to add RSA decryption capabilities?",
+    )) {
+        wrapkey_delegated.extend_from_slice(capabilities_rsa_decrypt);
+        authkey_capabilities.extend_from_slice(capabilities_rsa_decrypt);
+        authkey_delegated.extend_from_slice(capabilities_rsa_decrypt);
+    }
+
+	init_setup(session, previous_auth_id, delete, export, 
+				&wrapkey_delegated, &authkey_capabilities, &authkey_delegated);
 }
 
 fn parse_id(value: &str) -> Result<u16, String> {
@@ -710,7 +724,7 @@ fn dump_objects(session: &yubihsmrs::Session) {
 
         match wrap_result {
             Ok(bytes) => {
-                let filename = object_to_file(object.object_id, &bytes).unwrap_or_else(|err| {
+                let filename = object_to_file(object.object_id, object.object_type, &bytes).unwrap_or_else(|err| {
                     println!("Unable to save wrapped object: {}", err);
                     std::process::exit(1);
                 });
@@ -808,61 +822,99 @@ fn generate_selfsigned_certificate(session: &yubihsmrs::Session, key: Asymmetric
     selfsigned_certificate
 }
 
-fn setup_ejbca(session: &yubihsmrs::Session) {
-    // Generate asymmetric keypair on the device
-    let key_algorithm = get_key_algorithm("Enter asymmetric key algorithm:");
-    let label = get_string("Enter key label:");
-    let domains = get_domains("Enter domains:");
-
-    let key_capabilities;
-    if ObjectAlgorithm::is_rsa(key_algorithm) {
-        key_capabilities = vec![
+fn init_ejbca_setup(session: &yubihsmrs::Session, previous_auth_id: u16, delete: bool, export:bool) {
+	
+	let capabilities = vec![
+			ObjectCapability::GenerateAsymmetricKey,
+			ObjectCapability::DeleteAsymmetricKey,
+			ObjectCapability::PutOpaque,
+			ObjectCapability::DeleteOpaque,
+			ObjectCapability::GetOpaque,
+			ObjectCapability::PutAuthenticationKey,
+			ObjectCapability::DeleteAuthenticationKey,
+			ObjectCapability::ImportWrapped,
+			ObjectCapability::ExportWrapped,
             ObjectCapability::SignPkcs,
             ObjectCapability::SignPss,
+			ObjectCapability::SignEcdsa,
             ObjectCapability::SignAttestationCertificate,
-        ];
-    } else {
-        key_capabilities = vec![
-            ObjectCapability::SignEcdsa,
-            ObjectCapability::SignAttestationCertificate,
-        ];
-    }
+			ObjectCapability::ExportableUnderWrap,
+	];
+	
+	let mut delegated = vec![
+        	ObjectCapability::GetLogEntries,
+	];
+	delegated.extend_from_slice(&capabilities);
+	
+	init_setup(session, previous_auth_id, delete, export, &delegated, &capabilities, &delegated);
+}
 
-    let key = generate_keypair(session, &label, &key_capabilities, &domains, key_algorithm);
-    let key_id = key.get_key_id();
-    println!(
-        "Generated asymmetric keypair with ID 0x{:04x} on the device",
-        key_id
-    );
+fn create_ejbca_asymm_key(session: &yubihsmrs::Session) {
+		// Generate asymmetric keypair on the device
+	    let key_algorithm = get_key_algorithm("Enter asymmetric key algorithm:");
+	    let label = get_string("Enter key label:");
+	    let domains = get_domains("Enter domains:");
+	
+	    let key_capabilities;
+	    if ObjectAlgorithm::is_rsa(key_algorithm) {
+	        key_capabilities = vec![
+	            ObjectCapability::SignPkcs,
+	            ObjectCapability::SignPss,
+	            ObjectCapability::SignAttestationCertificate,
+				ObjectCapability::ExportableUnderWrap,
+	        ];
+	    } else {
+	        key_capabilities = vec![
+	            ObjectCapability::SignEcdsa,
+	            ObjectCapability::SignAttestationCertificate,
+				ObjectCapability::ExportableUnderWrap,
+	        ];
+	    }
+	
+	    let key = generate_keypair(session, &label, &key_capabilities, &domains, key_algorithm);
+	    let key_id = key.get_key_id();
+	    println!(
+	        "Generated asymmetric keypair with ID 0x{:04x} on the device",
+	        key_id
+	    );
+	
+	    // Import attestation certificate template into the device
+	    let cert = base64::decode(EJBCA_ATTESTATION_TEMPLATE).unwrap();
+	    let cert_id = import_certificate(session, key_id, &label, &domains, &[], &cert);
+	    if cert_id != key_id {
+	        println!("Failed to store the attestation certificate template with the same ID as the asymmetric key");
+	        delete_object(session, key_id, ObjectType::AsymmetricKey);
+	        delete_object(session, cert_id, ObjectType::Opaque);
+	        std::process::exit(1);
+	    }
+	
+	    // Generate self signed certificate for the asymmetric key
+	    let selfsigned_cert = generate_selfsigned_certificate(session, key);
+	
+	    // Delete the attestation template certificate from the device
+	    delete_object(session, cert_id, ObjectType::Opaque);
+	
+	    // Import the self signed certificate into the device
+	    let cert_id = import_certificate(session, key_id, &label, &domains, &[ObjectCapability::ExportableUnderWrap], &selfsigned_cert);
+	    if cert_id != key_id {
+	        println!("Failed to store the attestation certificate template with the same ID as the asymmetric key");
+	        delete_object(session, key_id, ObjectType::AsymmetricKey);
+	        delete_object(session, cert_id, ObjectType::Opaque);
+	        std::process::exit(1);
+	    }
+	    println!(
+	        "Stored selfsigned certificate with ID 0x{:04x} on the device",
+	        cert_id
+	    );
+}
 
-    // Import attestation certificate template into the device
-    let cert = base64::decode(EJBCA_ATTESTATION_TEMPLATE).unwrap();
-    let cert_id = import_certificate(session, key_id, &label, &domains, &[], &cert);
-    if cert_id != key_id {
-        println!("Failed to store the attestation certificate template with the same ID as the asymmetric key");
-        delete_object(session, key_id, ObjectType::AsymmetricKey);
-        delete_object(session, cert_id, ObjectType::Opaque);
-        std::process::exit(1);
-    }
-
-    // Generate self signed certificate for the asymmetric key
-    let selfsigned_cert = generate_selfsigned_certificate(session, key);
-
-    // Delete the attestation template certificate from the device
-    delete_object(session, cert_id, ObjectType::Opaque);
-
-    // Import the self signed certificate into the device
-    let cert_id = import_certificate(session, key_id, &label, &domains, &[], &selfsigned_cert);
-    if cert_id != key_id {
-        println!("Failed to store the attestation certificate template with the same ID as the asymmetric key");
-        delete_object(session, key_id, ObjectType::AsymmetricKey);
-        delete_object(session, cert_id, ObjectType::Opaque);
-        std::process::exit(1);
-    }
-    println!(
-        "Stored selfsigned certificate with ID 0x{:04x} on the device",
-        cert_id
-    );
+fn setup_ejbca(session: &yubihsmrs::Session, previous_auth_id: u16, delete: bool, export: bool, create_new_authkey:bool) {
+	
+	if create_new_authkey {
+		init_ejbca_setup(session, previous_auth_id, delete, export);
+	} else {
+		create_ejbca_asymm_key(session);
+	}
 }
 
 fn main() {
@@ -917,6 +969,11 @@ fn main() {
                 .short("e")
                 .help("Do not export under wrap the application objects"), // TODO(adma): should this also drop capabilities?
         ).arg(
+            Arg::with_name("no-new-authkey")
+                .long("no-new-authkey")
+                .short("a")
+                .help("Do not replace the current authentication key. Use this flag if you want to genetate an asymmetric key on the YubiHSM for use by EJBCA"),
+        ).arg(
             Arg::with_name("verbose")
                 .long("verbose")
                 .short("v")
@@ -962,7 +1019,13 @@ fn main() {
             !matches.is_present("no-delete"),
             !matches.is_present("no-export"),
         ),
-        Some("ejbca") => setup_ejbca(&session),
+        Some("ejbca") => setup_ejbca(
+            &session,
+            authkey,
+            !matches.is_present("no-delete"),
+            !matches.is_present("no-export"),
+			!matches.is_present("no-new-authkey"),
+		),
         Some("dump") => dump_objects(&session),
         Some("reset") => reset_device(
             &session,
