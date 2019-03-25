@@ -776,10 +776,10 @@ fn get_key_algorithm(prompt: &str) -> ObjectAlgorithm {
         ObjectAlgorithm::EcK256,
     ];
 
-    println!(
-        "Supported asymmetric key algorithms: {:?}",
-        supported_algorithms
-    );
+    println!("Supported asymmetric key algorithms:");
+    supported_algorithms
+        .iter()
+        .for_each(|algo| println!("\t {}", algo));
 
     let mut algo = get_string(prompt);
     loop {
