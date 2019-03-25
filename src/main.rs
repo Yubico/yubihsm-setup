@@ -187,12 +187,12 @@ fn get_domains(prompt: &str) -> Vec<yubihsmrs::object::ObjectDomain> {
                     continue;
                 }
 
-                if a.len() != 1 {
-                    if !bool::from(get_boolean_answer(
+                if a.len() != 1
+                    && !bool::from(get_boolean_answer(
                         "You have selected more than one domain, are you sure?",
-                    )) {
-                        continue;
-                    }
+                    ))
+                {
+                    continue;
                 }
                 println!("Using domains:");
                 a.iter().for_each(|domain| println!("\t {}", domain));
