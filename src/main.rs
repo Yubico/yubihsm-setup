@@ -196,7 +196,8 @@ fn get_domains(prompt: &str) -> Vec<yubihsmrs::object::ObjectDomain> {
                         continue;
                     }
                 }
-                println!("Using domains: {:#?}", a);
+                println!("Using domains:");
+                a.iter().for_each(|domain| println!("\t {}", domain));
                 break a;
             }
             _ => {
