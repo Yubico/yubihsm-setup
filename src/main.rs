@@ -716,7 +716,7 @@ fn restore_device(session: &yubihsmrs::Session, previous_auth_id: u16, delete: b
         };
 
         println!(
-            "Successfully imported object {:?}, with ID 0x{:04x}",
+            "Successfully imported object {}, with ID 0x{:04x}",
             handle.object_type, handle.object_id
         );
     }
@@ -749,12 +749,12 @@ fn dump_objects(session: &yubihsmrs::Session) {
                     });
 
                 println!(
-                    "Successfully exported object {:?} with ID 0x{:04x} to {}",
+                    "Successfully exported object {} with ID 0x{:04x} to {}",
                     object.object_type, object.object_id, filename
                 );
             }
             Err(err) => println!(
-                "Unable to export object {:?} with ID 0x{:04x}: {}. Skipping over ...",
+                "Unable to export object {} with ID 0x{:04x}: {}. Skipping over ...",
                 object.object_type, object.object_id, err
             ),
         }
