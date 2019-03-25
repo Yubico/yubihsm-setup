@@ -89,9 +89,9 @@ impl BooleanAnswer {
     }
 }
 
-impl Into<bool> for BooleanAnswer {
-    fn into(self) -> bool {
-        match self {
+impl From<BooleanAnswer> for bool {
+    fn from(ba: BooleanAnswer) -> bool {
+        match ba {
             BooleanAnswer::Yes => true,
             BooleanAnswer::No => false,
         }
