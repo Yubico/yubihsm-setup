@@ -630,7 +630,6 @@ fn is_valid_id(value: String) -> Result<(), String> {
     // prototype is dictated by Clap
     parse_id(&value).map(|_| {
         drop(value);
-        ()
     })
 }
 
@@ -800,14 +799,12 @@ fn generate_keypair(
     domains: &[ObjectDomain],
     key_algorithm: ObjectAlgorithm,
 ) -> AsymmetricKey {
-    let key = session
+    session
         .generate_asymmetric_key(&label, capabilities, domains, key_algorithm)
         .unwrap_or_else(|err| {
             println!("Unable to generate keypair: {}", err);
             std::process::exit(1);
-        });
-
-    key
+        })
 }
 
 fn import_certificate(
@@ -835,13 +832,11 @@ fn import_certificate(
 }
 
 fn generate_selfsigned_certificate(session: &yubihsmrs::Session, key: AsymmetricKey) -> Vec<u8> {
-    let selfsigned_certificate = key
-        .sign_attestation_certificate(key.get_key_id(), session)
+    key.sign_attestation_certificate(key.get_key_id(), session)
         .unwrap_or_else(|err| {
             println!("Unable to generate a self signed certificate: {}", err);
             std::process::exit(1);
-        });
-    selfsigned_certificate
+        })
 }
 
 fn init_ejbca_setup(
@@ -888,21 +883,20 @@ fn create_ejbca_asymm_key(session: &yubihsmrs::Session) {
     let label = get_string("Enter key label:");
     let domains = get_domains("Enter domains:");
 
-    let key_capabilities;
-    if ObjectAlgorithm::is_rsa(key_algorithm) {
-        key_capabilities = vec![
+    let key_capabilities = if ObjectAlgorithm::is_rsa(key_algorithm) {
+        vec![
             ObjectCapability::SignPkcs,
             ObjectCapability::SignPss,
             ObjectCapability::SignAttestationCertificate,
             ObjectCapability::ExportableUnderWrap,
-        ];
+        ]
     } else {
-        key_capabilities = vec![
+        vec![
             ObjectCapability::SignEcdsa,
             ObjectCapability::SignAttestationCertificate,
             ObjectCapability::ExportableUnderWrap,
-        ];
-    }
+        ]
+    };
 
     let key = generate_keypair(session, &label, &key_capabilities, &domains, key_algorithm);
     let key_id = key.get_key_id();
@@ -956,10 +950,11 @@ fn setup_ejbca(
     export: bool,
     create_new_authkey: bool,
 ) {
-    let mut credentials = (previous_auth_id, String::new());
-    if create_new_authkey {
-        credentials = init_ejbca_setup(session, previous_auth_id, delete, export);
-    }
+    let credentials = if create_new_authkey {
+        init_ejbca_setup(session, previous_auth_id, delete, export)
+    } else {
+        (previous_auth_id, String::new())
+    };
     let auth_id = credentials.0;
     let password = credentials.1;
 
