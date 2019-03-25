@@ -188,11 +188,9 @@ fn get_domains(prompt: &str) -> Vec<yubihsmrs::object::ObjectDomain> {
                 }
 
                 if a.len() != 1 {
-                    if get_boolean_answer("You have selected more than one domain, are you sure?")
-                        .into()
-                    {
-                        break a;
-                    } else {
+                    if !bool::from(get_boolean_answer(
+                        "You have selected more than one domain, are you sure?",
+                    )) {
                         continue;
                     }
                 }
