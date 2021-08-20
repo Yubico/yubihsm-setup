@@ -30,9 +30,10 @@ jobs:
           $ErrorActionPreference = "Stop"
           Set-PSDebug -Trace 1
 
+          cd ..
           Invoke-WebRequest -Uri  https://developers.yubico.com/YubiHSM2/Releases/yubihsm2-sdk-2021-04-windows-amd64.zip -OutFile yubihsm2-sdk-2021-04-windows-amd64.zip -UseBasicParsing
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           [System.IO.Compression.ZipFile]::ExtractToDirectory("yubihsm2-sdk-2021-04-windows-amd64.zip", "yubihsm2-sdk")
 
           ls
-          ls yubihsm2-sdk
+          ls yubihsm2-sdk/
