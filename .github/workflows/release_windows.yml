@@ -37,3 +37,8 @@ jobs:
 
           ls
           ls yubihsm2-sdk/yubihsm2-sdk/
+
+          mkdir yubihsm-shell
+          msiexec /i "$env:GITHUB_WORKSPACE/../yubihsm2-sdk/yubihsm2-sdk/yubihsm-shell-x64.msi" TARGETDIR="$env:GITHUB_WORKSPACE/../yubihsm-shell" /qb
+
+          ls yubihsm-shell
