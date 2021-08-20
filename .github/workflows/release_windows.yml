@@ -32,8 +32,7 @@ jobs:
 
           cd ..
           Invoke-WebRequest -Uri  https://developers.yubico.com/YubiHSM2/Releases/yubihsm2-sdk-2021-04-windows-amd64.zip -OutFile yubihsm2-sdk-2021-04-windows-amd64.zip -UseBasicParsing
-          Add-Type -AssemblyName System.IO.Compression.FileSystem
-          [System.IO.Compression.ZipFile]::ExtractToDirectory("../yubihsm2-sdk-2021-04-windows-amd64.zip", "yubihsm2-sdk")
+          Expand-Archive -Path $GITHUB_WORKSPACE/yubihsm2-sdk-2021-04-windows-amd64.zip -DestinationPath $GITHUB_WORKSPACE/yubihsm2-sdk -Verbose
 
           ls
           ls yubihsm2-sdk/
