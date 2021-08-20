@@ -36,4 +36,4 @@ jobs:
           [System.IO.Compression.ZipFile]::ExtractToDirectory("$env:GITHUB_WORKSPACE/../yubihsm2-sdk-2021-04-windows-amd64.zip", "$env:GITHUB_WORKSPACE/../yubihsm2-sdk")
 
           ls
-          ls yubihsm2-sdk/
+          ls yubihsm2-sdk/yubihsm2-sdk/
