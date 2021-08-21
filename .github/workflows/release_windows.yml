@@ -45,4 +45,5 @@ jobs:
           mkdir build; cd build
           cmake -A x64 -DBUILD_ONLY_LIB=ON ..
           cmake --build .
-          ls
+          ls lib
+          ls lib/Debug
