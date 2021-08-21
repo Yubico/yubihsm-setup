@@ -52,7 +52,7 @@ jobs:
           Set-PSDebug -Trace 1
           mkdir artifact
 
-          rustc.exe RUST_BACKTRACE=1 YUBIHSM_LIB_DIR=$env:GITHUB_WORKSPACE/../yubihsm-shell-$env:LIB_VERSION/build/lib/Debug cargo.exe build --release
+          RUST_BACKTRACE=1 YUBIHSM_LIB_DIR=$env:GITHUB_WORKSPACE/../yubihsm-shell-$env:LIB_VERSION/build/lib/Debug cargo.exe build --release
           install target/release/yubihsm-setup $env:GITHUB_WORKSPACE/artifact/yubihsm-setup
 
       - name: Upload artifact
