@@ -32,4 +32,17 @@ jobs:
           $ErrorActionPreference = "Stop"
           Set-PSDebug -Trace 1
 
-          Get-Childitem –Path C:\ -Include libcrypto*.dll -Recurse -ErrorAction SilentlyContinue
+          cd ..
+          Invoke-WebRequest -Uri https://developers.yubico.com/yubihsm-shell/Releases/yubihsm-shell-$env:LIB_VERSION.tar.gz -OutFile yubihsm-shell.tar.gz -UseBasicParsing
+          tar xf yubihsm-shell.tar.gz
+
+          ls
+          ls yubihsm-shell-$env:LIB_VERSION
+
+          C:/vcpkg/vcpkg.exe install openssl:x64-windows
+          $env:OPENSSL_ROOT_DIR ="C:/vcpkg/packages/openssl_x64-windows"
+          cd yubihsm-shell-$env:LIB_VERSION
+          mkdir build; cd build
+          cmake -A x64 -DBUILD_ONLY_LIB=ON ..
+          cmake --build .
+          ls
