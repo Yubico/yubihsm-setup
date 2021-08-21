@@ -7,44 +7,37 @@ jobs:
 
     runs-on: windows-latest
     env:
-      LIB_VERSION: 2.2.0
+      LIBYUBIHSM_VERSION: 2.2.0
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      # downloads and build yubihsm-shell from source release on dev.y.c
       - name: install yubihsm-shell
         run: |
           $ErrorActionPreference = "Stop"
           Set-PSDebug -Trace 1
 
           cd ..
-          Invoke-WebRequest -Uri https://developers.yubico.com/yubihsm-shell/Releases/yubihsm-shell-$env:LIB_VERSION.tar.gz -OutFile yubihsm-shell.tar.gz -UseBasicParsing
+          Invoke-WebRequest -Uri https://developers.yubico.com/yubihsm-shell/Releases/yubihsm-shell-$env:LIBYUBIHSM_VERSION.tar.gz -OutFile yubihsm-shell.tar.gz -UseBasicParsing
           tar xf yubihsm-shell.tar.gz
-
-          ls
-          ls yubihsm-shell-$env:LIB_VERSION
 
           C:/vcpkg/vcpkg.exe install openssl:x64-windows
           $env:OPENSSL_ROOT_DIR ="C:/vcpkg/packages/openssl_x64-windows"
-          cd yubihsm-shell-$env:LIB_VERSION
+
+          cd yubihsm-shell-$env:LIBYUBIHSM_VERSION
           mkdir build; cd build
           cmake -A x64 -DBUILD_ONLY_LIB=ON ..
           cmake --build .
-          ls lib
-          ls lib/Debug
 
       - name: clone yubihsmrs
         run: |
           $ErrorActionPreference = "Stop"
           Set-PSDebug -Trace 1
 
-          pwd
-
           cd ..
           git clone https://github.com/Yubico/yubihsmrs.git
-          ls
-          ls yubihsm-setup
 
       - name: Build yubihsm-setup
         run: |
@@ -56,7 +49,7 @@ jobs:
           rustup default stable-x86_64-pc-windows-gnu
 
           $env:RUST_BACKTRACE=1
-          $env:YUBIHSM_LIB_DIR="$env:GITHUB_WORKSPACE/../yubihsm-shell-$env:LIB_VERSION/build/lib/Debug"
+          $env:YUBIHSM_LIB_DIR="$env:GITHUB_WORKSPACE/../yubihsm-shell-$env:LIBYUBIHSM_VERSION/build/lib/Debug"
           cargo.exe build --release
           install target/release/yubihsm-setup $env:GITHUB_WORKSPACE/artifact/yubihsm-setup
 
