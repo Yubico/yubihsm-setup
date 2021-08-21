@@ -31,15 +31,9 @@ jobs:
           Set-PSDebug -Trace 1
 
           cd ..
-          Invoke-WebRequest -Uri  https://developers.yubico.com/YubiHSM2/Releases/yubihsm2-sdk-2021-04-windows-amd64.zip -OutFile yubihsm2-sdk-2021-04-windows-amd64.zip -UseBasicParsing
-          Add-Type -AssemblyName System.IO.Compression.FileSystem
-          [System.IO.Compression.ZipFile]::ExtractToDirectory("$env:GITHUB_WORKSPACE/../yubihsm2-sdk-2021-04-windows-amd64.zip", "$env:GITHUB_WORKSPACE/../yubihsm2-sdk")
+          Invoke-WebRequest -Uri https://developers.yubico.com/yubihsm-shell/Releases/yubihsm-shell-2.2.0.tar.gz -OutFile yubihsm-shell.tar.gz -UseBasicParsing
+          tar xf yubihsm-shell.tar.gz
 
           ls
-          ls yubihsm2-sdk/yubihsm2-sdk/
-
-          mkdir yubihsm-shell
-          msiexec /i "D:\a\yubihsm-setup\yubihsm2-sdk\yubihsm2-sdk\yubihsm-shell-x64.msi" INSTALLDIR="$env:GITHUB_WORKSPACE/../yubihsm-shell" /q
-          Get-Childitem –Path D:\ -Include "yubihsm-shell.exe" -Recurse -ErrorAction SilentlyContinue
-          Get-Childitem –Path C:\ -Include "yubihsm-shell.exe" -Recurse -ErrorAction SilentlyContinue
+          ls yubihsm-shell
 
