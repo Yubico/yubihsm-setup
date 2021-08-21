@@ -16,7 +16,7 @@
 
 [package]
 name = "yubihsm-setup"
-version = "2.1.1"
+version = "2.2.0"
 authors = ["Alessio Di Mauro <alessio@yubico.com>"]
 description = "Setup tool for YubiHSM 2"
 license = "Apache-2.0"
@@ -31,7 +31,7 @@ scan_dir = "0.3.3"
 
 [dependencies.yubihsmrs]
 path = "../yubihsmrs/"
-version = "2.0.0"
+version = "2.1.2"
 
 [package.metadata.deb]
 maintainer = "Alessio Di Mauro <alessio@yubico.com>"
