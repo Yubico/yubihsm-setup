@@ -39,3 +39,10 @@ jobs:
           ls
           ls yubihsm-shell-$env:LIB_VERSION
 
+          C:/vcpkg/vcpkg.exe install openssl:x64-windows
+          $env:OPENSSL_ROOT_DIR ="C:/vcpkg/packages/openssl_x64-windows"
+          cd yubihsm-shell-$env:LIB_VERSION
+          mkdir build; cd build
+          cmake -A x64 -DBUILD_ONLY_LIB=ON ..
+          cmake --build .
+          ls src/
