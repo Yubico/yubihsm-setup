@@ -13,20 +13,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: clone yubihsmrs
-        run: |
-          $ErrorActionPreference = "Stop"
-          Set-PSDebug -Trace 1
-          mkdir artifact
-
-          pwd
-
-          cd ..
-          git clone https://github.com/Yubico/yubihsmrs.git
-
-          ls
-          ls yubihsm-setup
-
       - name: install yubihsm-shell
         run: |
           $ErrorActionPreference = "Stop"
@@ -47,3 +33,30 @@ jobs:
           cmake --build .
           ls lib
           ls lib/Debug
+
+      - name: clone yubihsmrs
+        run: |
+          $ErrorActionPreference = "Stop"
+          Set-PSDebug -Trace 1
+
+          pwd
+
+          cd ..
+          git clone https://github.com/Yubico/yubihsmrs.git
+          ls
+          ls yubihsm-setup
+
+      - name: Build yubihsm-setup
+        run: |
+          $ErrorActionPreference = "Stop"
+          Set-PSDebug -Trace 1
+          mkdir artifact
+
+          rustc.exe RUST_BACKTRACE=1 YUBIHSM_LIB_DIR=$env:GITHUB_WORKSPACE/../yubihsm-shell-$env:LIB_VERSION/build/lib/Debug cargo.exe build --release
+          install target/release/yubihsm-setup $env:GITHUB_WORKSPACE/artifact/yubihsm-setup
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: yubihsm-setup
+          path: artifact
