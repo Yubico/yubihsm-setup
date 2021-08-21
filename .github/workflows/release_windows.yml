@@ -6,6 +6,8 @@ jobs:
   Windows-Build:
 
     runs-on: windows-latest
+    env:
+      LIB_VERSION: 2.2.0
 
     steps:
       - name: Checkout repository
@@ -31,9 +33,9 @@ jobs:
           Set-PSDebug -Trace 1
 
           cd ..
-          Invoke-WebRequest -Uri https://developers.yubico.com/yubihsm-shell/Releases/yubihsm-shell-2.2.0.tar.gz -OutFile yubihsm-shell.tar.gz -UseBasicParsing
+          Invoke-WebRequest -Uri https://developers.yubico.com/yubihsm-shell/Releases/yubihsm-shell-$env:LIB_VERSION.tar.gz -OutFile yubihsm-shell.tar.gz -UseBasicParsing
           tar xf yubihsm-shell.tar.gz
 
           ls
-          ls yubihsm-shell
+          ls yubihsm-shell-$env:LIB_VERSION
 
