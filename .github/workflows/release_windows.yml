@@ -52,6 +52,9 @@ jobs:
           Set-PSDebug -Trace 1
           mkdir artifact
 
+          rustup target add x86_64-pc-windows-gnu
+          rustup default stable-x86_64-pc-windows-gnu
+
           $env:RUST_BACKTRACE=1
           $env:YUBIHSM_LIB_DIR="$env:GITHUB_WORKSPACE/../yubihsm-shell-$env:LIB_VERSION/build/lib/Debug"
           cargo.exe build --release
