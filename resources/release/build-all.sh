@@ -2,10 +2,6 @@
 
 set -e -o pipefail -x
 
-mkdir sources
-cd sources
-git clone https://github.com/Yubico/yubihsmrs.git
-
 for machine in focal hirsute debian10 fedora33 fedora34 centos7 centos8; do
   vagrant box update $machine
   time vagrant up $machine

@@ -30,8 +30,11 @@ export PATH=$PATH:~/.cargo/bin
 if [[ ! -x $(command -v rustc) ]]; then
   curl -o rustup.sh https://sh.rustup.rs
   bash ./rustup.sh -y
-#  rustup update 1.33.0
-  cargo install cargo-deb
+  if [ "$PLATFORM" == "ubuntu1404" ] || [ "$PLATFORM" == "ubuntu1604" ]; then
+    cargo install cargo-deb --version 1.28.0
+  else
+    cargo install cargo-deb
+  fi
 fi
 
 export INPUT=/shared/

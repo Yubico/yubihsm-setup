@@ -13,7 +13,7 @@ if [ "$PLATFORM" == "centos7" ]; then
                     devtoolset-7-make    \
                     chrpath              \
                     git                  \
-                    cmake3               \
+                    cmake               \
                     gengetopt            \
                     help2man             \
                     libevent-devel       \
@@ -38,6 +38,7 @@ if [ "$PLATFORM" == "centos7" ]; then
                     pcsc-lite-devel
 
   . /opt/rh/devtoolset-7/enable
+  export CMAKE="cmake"
 
 elif [ "$PLATFORM" == "centos8" ]; then
   sudo yum -y install epel-release
@@ -65,6 +66,8 @@ elif [ "$PLATFORM" == "centos8" ]; then
                     opensp-devel         \
                     openssl-devel        \
                     pcsc-lite-devel
+
+  export CMAKE="cmake3"
 
 elif [ "${PLATFORM:0:6}" == "fedora" ]; then
   sudo dnf -y update
@@ -96,6 +99,8 @@ elif [ "${PLATFORM:0:6}" == "fedora" ]; then
                     cppcheck          \
                     lcov              \
                     pcsc-lite-devel
+
+  export CMAKE="cmake"
 fi
 
 
@@ -106,7 +111,7 @@ if [[ ! -x $(command -v rustc) ]]; then
 fi
 
 export INPUT=/shared
-export OUTPUT=/shared/resources/release/build/$PLATFORM/yubihsm-connector
+export OUTPUT=/shared/resources/release/build/$PLATFORM/yubihsm-setup
 rm -rf $OUTPUT
 mkdir -p $OUTPUT
 
@@ -117,7 +122,7 @@ pushd "/tmp" &>/dev/null
       tar -xzvf -
   pushd "yubihsm-shell-$LIBYUBIHSM_VERSION" &>/dev/null
     mkdir build; cd build
-    cmake .. -DBUILD_ONLY_LIB=ON
+    $CMAKE .. -DBUILD_ONLY_LIB=ON
     make
   popd &>/dev/null
 
