@@ -48,7 +48,7 @@ jobs:
           cd yubihsm-setup
           RUSTFLAGS="-C link-args=-Wl,-rpath,\$ORIGIN/../lib"  YUBIHSM_LIB_DIR=/usr/local/lib cargo build --release
           strip -u -r target/release/yubihsm-setup
-          install target/release/yubihsm-setup ../artifact
+          install target/release/yubihsm-setup artifact
 
           otool -L target/release/yubihsm-setup
 
