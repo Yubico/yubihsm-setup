@@ -53,6 +53,9 @@ jobs:
           cargo deb --no-build
           cp target/debian/*.deb artifact/yubihsm-setup/
 
+          ./target/release/yubihsm-setup --version
+          ./target/release/yubihsm-setup --help
+
           LICENSE_DIR="artifact/yubihsm-setup/share/yubihsm-setup"
           mkdir -p $LICENSE_DIR
           cp -r resources/release/licenses $LICENSE_DIR/
@@ -115,6 +118,9 @@ jobs:
           strip --strip-all target/release/yubihsm-setup
           cargo deb --no-build
           cp target/debian/*.deb artifact/yubihsm-setup/
+
+          ./target/release/yubihsm-setup --version
+          ./target/release/yubihsm-setup --help
 
           LICENSE_DIR="artifact/yubihsm-setup/share/yubihsm-setup"
           mkdir -p $LICENSE_DIR
@@ -179,6 +185,9 @@ jobs:
           cargo deb --no-build
           cp target/debian/*.deb artifact/yubihsm-setup/
 
+          ./target/release/yubihsm-setup --version
+          ./target/release/yubihsm-setup --help
+          
           LICENSE_DIR="artifact/yubihsm-setup/share/yubihsm-setup"
           mkdir -p $LICENSE_DIR
           cp -r resources/release/licenses $LICENSE_DIR/
