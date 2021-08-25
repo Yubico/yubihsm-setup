@@ -3,39 +3,20 @@ set -e -o pipefail
 set -x
 
 PLATFORM=$1
-LIBYUBIHSM_VERSION="2.2.0"
+LIBYUBIHSM_VERSION="2.2.0" # To download the latest released version of yubihsm-shell
 
 if [ "$PLATFORM" == "centos7" ]; then
   sudo yum -y install centos-release-scl
   sudo yum -y update && sudo yum -y upgrade
   sudo yum -y install devtoolset-7-gcc     \
-                    devtoolset-7-gcc-c++ \
-                    devtoolset-7-make    \
-                    chrpath              \
-                    git                  \
-                    cmake               \
-                    gengetopt            \
-                    help2man             \
-                    libevent-devel       \
-                    openssl-devel        \
-                    libedit-devel        \
-                    libcurl-devel        \
-                    libusbx-devel        \
-                    libseccomp-devel     \
-                    rpm-build            \
-                    redhat-rpm-config    \
-                    imlib2-devel         \
-                    libjpeg-devel        \
-                    libpng-devel         \
-                    libXt-devel          \
-                    libXinerama-devel    \
-                    libexif-devel        \
-                    perl-Test-Command    \
-                    perl-Test-Harness    \
-                    clang                \
-                    cppcheck             \
-                    lcov                 \
-                    pcsc-lite-devel
+                      devtoolset-7-gcc-c++ \
+                      git                  \
+                      cmake                \
+                      openssl-devel        \
+                      libcurl-devel        \
+                      libusbx-devel        \
+                      clang                \
+                      rpm-build
 
   . /opt/rh/devtoolset-7/enable
   export CMAKE="cmake"
@@ -46,59 +27,22 @@ elif [ "$PLATFORM" == "centos8" ]; then
 
   sudo dnf group -y install "Development Tools"
   sudo dnf config-manager -y --set-enabled powertools
-
-  sudo yum -y install chrpath              \
-                    cmake3               \
-                    help2man             \
-                    libevent-devel       \
-                    libedit-devel        \
-                    libcurl-devel        \
-                    libusbx-devel        \
-                    libseccomp-devel     \
-                    imlib2-devel         \
-                    libjpeg-devel        \
-                    libXt-devel          \
-                    libXinerama-devel    \
-                    perl-Test-Harness    \
-                    clang                \
-                    golang               \
-                    texinfo              \
-                    opensp-devel         \
-                    openssl-devel        \
-                    pcsc-lite-devel
+  sudo yum -y install cmake3               \
+                      libcurl-devel        \
+                      libusbx-devel        \
+                      openssl-devel
 
   export CMAKE="cmake3"
 
 elif [ "${PLATFORM:0:6}" == "fedora" ]; then
   sudo dnf -y update
-  sudo dnf -y install gcc              \
-                    gcc-c++          \
-                    binutils         \
-                    chrpath          \
+  sudo dnf -y install binutils         \
                     git              \
-                    make             \
                     cmake            \
-                    gengetopt        \
-                    help2man         \
                     openssl-devel    \
                     libusb-devel     \
-                    libevent-devel   \
-                    libseccomp-devel \
-                    libedit-devel    \
                     libcurl-devel    \
-                    rpmdevtools      \
-                    imlib2-devel     \
-                    libjpeg-devel    \
-                    libpng-devel     \
-                    libXt-devel      \
-                    libXinerama-devel \
-                    libexif-devel     \
-                    perl-Test-Command \
-                    perl-Test-Harness \
-                    clang             \
-                    cppcheck          \
-                    lcov              \
-                    pcsc-lite-devel
+                    rpmdevtools
 
   export CMAKE="cmake"
 fi
@@ -116,14 +60,16 @@ rm -rf $OUTPUT
 mkdir -p $OUTPUT
 
 pushd "/tmp" &>/dev/null
-  # install yubihsm-shell
+  # build yubihsm-shell from source
   rm -rf yubihsm-shell-$LIBYUBIHSM_VERSION
   curl -L --max-redirs 2 -o - https://developers.yubico.com/yubihsm-shell/Releases/yubihsm-shell-$LIBYUBIHSM_VERSION.tar.gz |\
       tar -xzvf -
   pushd "yubihsm-shell-$LIBYUBIHSM_VERSION" &>/dev/null
-    mkdir build; cd build
+    mkdir build
+    pushd "build" &>/dev/null
     $CMAKE .. -DBUILD_ONLY_LIB=ON
     make
+    popd &>/dev/null
   popd &>/dev/null
 
   # install yubihsmrs
@@ -142,9 +88,11 @@ pushd "/tmp" &>/dev/null
   popd &>/dev/null
 popd &>/dev/null
 
+LICENSE_DIR="$OUTPUT/share/yubihsm-setup"
+mkdir -p $LICENSE_DIR
 pushd "/shared" &>/dev/null
-  cp -r resources/release/licenses "$OUTPUT/"
-  for lf in $OUTPUT/licenses/*; do
+  cp -r resources/release/licenses $LICENSE_DIR/
+  for lf in $LICENSE_DIR/licenses/*; do
 	  chmod 644 $lf
   done
 

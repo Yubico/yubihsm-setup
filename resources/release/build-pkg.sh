@@ -4,27 +4,11 @@ set -x
 
 PLATFORM=$1
 
-YUBIHSMSDK_VERSION="2021-04"
+YUBIHSMSDK_VERSION="2021-08" # To download the latest released version of yubihsm-shell
 export DEBIAN_FRONTEND=noninteractive
 
 sudo apt-get update && sudo  apt-get dist-upgrade -y
-sudo apt-get install -y build-essential      \
-                        chrpath              \
-                        git                  \
-                        cmake                \
-                        pkg-config           \
-                        gengetopt            \
-                        help2man             \
-                        libedit-dev          \
-                        libcurl4-openssl-dev \
-                        liblzma-dev          \
-                        libssl-dev           \
-                        libseccomp-dev       \
-                        libusb-1.0.0-dev     \
-                        dh-exec              \
-                        git-buildpackage     \
-                        curl                 \
-                        libpcsclite-dev
+sudo apt-get install -y build-essential git
 
 export PATH=$PATH:~/.cargo/bin
 if [[ ! -x $(command -v rustc) ]]; then
