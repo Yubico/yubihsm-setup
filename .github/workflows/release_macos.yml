@@ -1,0 +1,28 @@
+name: "Building release binaries on MacOS"
+
+on: [push]
+
+jobs:
+  MacOS-Build:
+
+    runs-on: macos-10.15
+    env:
+      YUBIHSMSDK_VERSION: 2021-08
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      # downloads and build yubihsm-shell from source release on dev.y.c
+      - name: install yubihsm-shell
+        run: |
+          set -e -o pipefail
+          set -x
+
+          cd ..
+          curl -L --max-redirs 2 -o yubihsm-sdk-installer.pkg https://developers.yubico.com/YubiHSM2/Releases/yubihsm2-sdk-$YUBIHSMSDK_VERSION-darwin-amd64.pkg
+          ls
+          ls /usr/local
+          ls /usr/local/bin
+          sudo installer -verbose -store -pkg yubihsm-sdk-installer.pkg -target /
+          ls /usr/local/bin
