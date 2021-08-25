@@ -44,8 +44,8 @@ jobs:
           if [[ ! -x $(command -v rustc) ]]; then
             curl -o rustup.sh https://sh.rustup.rs
             bash ./rustup.sh -y
-            cargo install cargo-deb --version 1.28.0
           fi
+          cargo install cargo-deb --version 1.28.0
 
           cd yubihsm-setup
           YUBIHSM_LIB_DIR=$(dpkg -L libyubihsm1 | grep -e "libyubihsm.so.2$" | xargs dirname) cargo build --release
@@ -107,8 +107,8 @@ jobs:
           if [[ ! -x $(command -v rustc) ]]; then
             curl -o rustup.sh https://sh.rustup.rs
             bash ./rustup.sh -y
-            cargo install cargo-deb
           fi
+          cargo install cargo-deb
 
           cd yubihsm-setup
           YUBIHSM_LIB_DIR=$(dpkg -L libyubihsm1 | grep -e "libyubihsm.so.2$" | xargs dirname) cargo build --release
@@ -170,8 +170,8 @@ jobs:
           if [[ ! -x $(command -v rustc) ]]; then
             curl -o rustup.sh https://sh.rustup.rs
             bash ./rustup.sh -y
-            cargo install cargo-deb
           fi
+          cargo install cargo-deb
 
           cd yubihsm-setup
           YUBIHSM_LIB_DIR=$(dpkg -L libyubihsm1 | grep -e "libyubihsm.so.2$" | xargs dirname) cargo build --release
