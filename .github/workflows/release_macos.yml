@@ -1,0 +1,62 @@
+name: "Building release binaries on MacOS"
+
+on: [push]
+
+jobs:
+  MacOS-Build:
+
+    runs-on: macos-10.15
+    env:
+      YUBIHSMSDK_VERSION: 2021-08
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      # download yubihsm-sdk installer from dev.y.c and install it
+      - name: install yubihsm-shell
+        run: |
+          set -e -o pipefail
+          set -x
+
+          cd ..
+          curl -L --max-redirs 2 -o yubihsm-sdk-installer.pkg https://developers.yubico.com/YubiHSM2/Releases/yubihsm2-sdk-$YUBIHSMSDK_VERSION-darwin-amd64.pkg
+          sudo installer -verbose -store -pkg yubihsm-sdk-installer.pkg -target /
+
+      - name: clone yubihsmrs
+        run: |
+          set -e -o pipefail
+          set -x
+
+          cd ..
+          git clone https://github.com/Yubico/yubihsmrs.git
+
+      - name: Build yubihsm-setup
+        run: |
+          set -e -o pipefail
+          set -x
+          mkdir artifact
+
+          cd ..
+          brew install libusb
+          export PATH=$PATH:~/.cargo/bin
+          if [[ ! -x $(command -v rustc) ]]; then
+            curl -o rustup.sh https://sh.rustup.rs
+            bash ./rustup.sh -y
+          fi
+
+          cd yubihsm-setup
+          RUSTFLAGS="-C link-args=-Wl,-rpath,\$ORIGIN/../lib"  YUBIHSM_LIB_DIR=/usr/local/lib cargo build --release
+          strip -u -r target/release/yubihsm-setup
+          install target/release/yubihsm-setup artifact
+
+          otool -L target/release/yubihsm-setup
+
+          ./target/release/yubihsm-setup --version
+          ./target/release/yubihsm-setup --help
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: yubihsm-setup
+          path: artifact
