@@ -307,7 +307,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "yubihsm-setup"
-version = "2.1.1"
+version = "2.2.0"
 dependencies = [
  "base64 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -315,12 +315,12 @@ dependencies = [
  "regex 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "rusty_secrets 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "scan_dir 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "yubihsmrs 2.1.1",
+ "yubihsmrs 2.1.2",
 ]
 
 [[package]]
 name = "yubihsmrs"
-version = "2.1.1"
+version = "2.1.2"
 dependencies = [
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libyubihsm-sys 2.0.0",
