@@ -22,16 +22,16 @@ description = "Setup tool for YubiHSM 2"
 license = "Apache-2.0"
 
 [dependencies]
-base64 = "0.7.0"
-clap = "2.26.0"
-lazy_static = "0.2.8"
-regex = "0.2.10"
+base64 = "0.13.0"
+clap = "2.34.0"
+lazy_static = "1.4.0"
+regex = "1.5.4"
 rusty_secrets = "0.0.2"
 scan_dir = "0.3.3"
 
 [dependencies.yubihsmrs]
 path = "../yubihsmrs/"
-version = "2.1.2"
+version = "2.2.0"
 
 [package.metadata.deb]
 maintainer = "Alessio Di Mauro <alessio@yubico.com>"
