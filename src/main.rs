@@ -995,9 +995,7 @@ fn main() {
                         .long("wrapkey")
                         .short("w")
                         .help("Wrap key to dump objects under")
-                        .default_value("2")
                         .takes_value(true)
-                        .hide_default_value(false)
                         .validator(is_valid_id),
                 ),
             SubCommand::with_name("restore").about("Restore or setup additional devices"),
@@ -1104,7 +1102,7 @@ fn main() {
         ),
         Some("dump") => dump_objects(
             &session,
-    matches.subcommand_matches("dump")
+            matches.subcommand_matches("dump")
                 .unwrap()
                 .value_of("wrapkey"),
         ),
