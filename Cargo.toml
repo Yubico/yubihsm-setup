@@ -31,7 +31,7 @@ scan_dir = "0.3.3"
 
 [dependencies.yubihsmrs]
 path = "../yubihsmrs/"
-version = "2.2.0"
+version = "2.1.2"
 
 [package.metadata.deb]
 maintainer = "Alessio Di Mauro <alessio@yubico.com>"
