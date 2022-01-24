@@ -729,11 +729,15 @@ fn restore_device(session: &yubihsmrs::Session, previous_auth_id: u16, delete: b
     delete_previous_authkey_maybe(session, previous_auth_id, delete);
 }
 
-fn dump_objects(session: &yubihsmrs::Session) {
-    let wrap_id = get_integer(
-        "Enter the wrapping key ID to use for exporting objects:",
-        false,
-    );
+fn dump_objects(session: &yubihsmrs::Session, option: Option<&str>) {
+    let wrap_id = if let Some(id) = option {
+        parse_id(id).unwrap()
+    } else {
+        get_integer(
+            "Enter the wrapping key ID to use for exporting objects:",
+            false,
+        )
+    };
 
     let objects = session.list_objects().unwrap_or_else(|err| {
         println!("Unable to list objects: {}", err);
@@ -759,8 +763,8 @@ fn dump_objects(session: &yubihsmrs::Session) {
                 );
             }
             Err(err) => println!(
-                "Unable to export object {} with ID 0x{:04x}: {}. Skipping over ...",
-                object.object_type, object.object_id, err
+                "Unable to export object {} with ID 0x{:04x} wrapped under key ID 0x{:04x}: {}. Skipping over ...",
+                object.object_type, object.object_id, wrap_id, err
             ),
         }
     }
@@ -984,7 +988,16 @@ fn main() {
         .subcommands(vec![
             SubCommand::with_name("ksp").about("Setup for ADCS usage"),
             SubCommand::with_name("ejbca").about("Setup for EJBCA usage"),
-            SubCommand::with_name("dump").about("Dump wrapped objects"),
+            SubCommand::with_name("dump")
+                .about("Dump wrapped objects")
+                .arg(
+                    Arg::with_name("wrapkey")
+                        .long("wrapkey")
+                        .short("w")
+                        .help("Wrap key to dump objects under")
+                        .takes_value(true)
+                        .validator(is_valid_id),
+                ),
             SubCommand::with_name("restore").about("Restore or setup additional devices"),
             SubCommand::with_name("reset")
                 .about("Reset the device")
@@ -1087,7 +1100,12 @@ fn main() {
             !matches.is_present("no-export"),
             !matches.is_present("no-new-authkey"),
         ),
-        Some("dump") => dump_objects(&session),
+        Some("dump") => dump_objects(
+            &session,
+            matches.subcommand_matches("dump")
+                .unwrap()
+                .value_of("wrapkey"),
+        ),
         Some("reset") => reset_device(
             &session,
             matches
