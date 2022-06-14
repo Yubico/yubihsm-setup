@@ -345,6 +345,7 @@ fn recover_wrapkey() -> (
         }
 
         shares_vec.push(share);
+        clear_screen();
     }
 
     let secret = rusty_secrets::recover_secret(shares_vec).unwrap_or_else(|err| {
