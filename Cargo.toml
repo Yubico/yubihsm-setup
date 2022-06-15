@@ -16,7 +16,7 @@
 
 [package]
 name = "yubihsm-setup"
-version = "2.3.0"
+version = "2.3.1"
 authors = ["Alessio Di Mauro <alessio@yubico.com>"]
 description = "Setup tool for YubiHSM 2"
 license = "Apache-2.0"
