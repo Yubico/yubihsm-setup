@@ -460,6 +460,7 @@ fn init_setup(
     previous_auth_id: u16,
     delete: bool,
     export: bool,
+    label_prefix: &str,
     wrapkey_delegated: &[ObjectCapability],
     authkey_capabilities: &[ObjectCapability],
     authkey_delegated: &[ObjectCapability],
@@ -468,6 +469,11 @@ fn init_setup(
         ObjectCapability::ImportWrapped,
         ObjectCapability::ExportWrapped,
     ];
+
+    let mut prefix = String::from(label_prefix.trim());
+    if prefix.len() > 1 {
+        prefix.push(' ');
+    }
 
     let wrapkey = session.get_random(WRAPKEY_LEN).unwrap_or_else(|err| {
         println!("Unable to generate random data: {}", err);
@@ -481,7 +487,7 @@ fn init_setup(
     let wrap_id = session
         .import_wrap_key(
             wrap_id,
-            "Wrap key",
+            &(prefix.to_owned() + "Wrap key"),
             &domains,
             &wrapkey_capabilities,
             ObjectAlgorithm::Aes256CcmWrap,
@@ -512,10 +518,11 @@ fn init_setup(
         true,
     );
     let application_password = get_string("Enter application authentication key password:");
+    let authenication_key_label = &(prefix.to_owned() + &"Application auth key");
     let auth_id = session
         .import_authentication_key(
             auth_id,
-            "Application auth key",
+            authenication_key_label,
             &domains,
             &authkey_capabilities,
             &authkey_delegated,
@@ -608,6 +615,7 @@ fn setup_ksp(session: &yubihsmrs::Session, previous_auth_id: u16, delete: bool, 
         previous_auth_id,
         delete,
         export,
+        "",
         &wrapkey_delegated,
         &authkey_capabilities,
         &authkey_delegated,
@@ -880,6 +888,47 @@ fn init_ejbca_setup(
         previous_auth_id,
         delete,
         export,
+        "",
+        &delegated,
+        &capabilities,
+        &delegated,
+    );
+    (auth_id, password)
+}
+
+fn init_wrapkey_setup(
+    session: &yubihsmrs::Session,
+    previous_auth_id: u16,
+    delete: bool,
+    export: bool,
+    label_prefix: &str,
+) -> (u16, String) {
+    let capabilities = vec![
+        ObjectCapability::GenerateAsymmetricKey,
+        ObjectCapability::DeleteAsymmetricKey,
+        ObjectCapability::PutOpaque,
+        ObjectCapability::DeleteOpaque,
+        ObjectCapability::GetOpaque,
+        ObjectCapability::PutAuthenticationKey,
+        ObjectCapability::DeleteAuthenticationKey,
+        ObjectCapability::ImportWrapped,
+        ObjectCapability::ExportWrapped,
+        ObjectCapability::SignPkcs,
+        ObjectCapability::SignPss,
+        ObjectCapability::SignEcdsa,
+        ObjectCapability::SignAttestationCertificate,
+        ObjectCapability::ExportableUnderWrap,
+    ];
+
+    let mut delegated = vec![ObjectCapability::GetLogEntries];
+    delegated.extend_from_slice(&capabilities);
+
+    let (auth_id, password) = init_setup(
+        session,
+        previous_auth_id,
+        delete,
+        export,
+        label_prefix,
         &delegated,
         &capabilities,
         &delegated,
@@ -981,6 +1030,19 @@ fn setup_ejbca(
     }
 }
 
+fn setup_wrapkey(
+    session: &yubihsmrs::Session,
+    previous_auth_id: u16,
+    delete: bool,
+    label_prefix: Option<&str>,
+) {
+   init_wrapkey_setup(session, 
+        previous_auth_id, 
+        delete,
+        false,
+        &label_prefix.unwrap_or(""));
+}
+
 fn main() {
     let matches = App::new(env!("CARGO_PKG_NAME"))
         .version(crate_version!())
@@ -999,6 +1061,14 @@ fn main() {
                         .takes_value(true)
                         .validator(is_valid_id),
                 ),
+            SubCommand::with_name("genwrapkey")
+                .about("Create a new split wrapkey with associcated auth key")
+                .arg(Arg::with_name("label-prefix")
+                        .long("label-prefix")
+                        .short("l")
+                        .help("Label prefix for wrap key and auth key")
+                        .default_value("")
+                        .takes_value(true)),
             SubCommand::with_name("restore").about("Restore or setup additional devices"),
             SubCommand::with_name("reset")
                 .about("Reset the device")
@@ -1100,6 +1170,15 @@ fn main() {
             !matches.is_present("no-delete"),
             !matches.is_present("no-export"),
             !matches.is_present("no-new-authkey"),
+        ),
+        Some("genwrapkey") => setup_wrapkey(
+            &session,
+            authkey,
+            !matches.is_present("no-delete"),
+            matches
+                .subcommand_matches("genwrapkey")
+                .unwrap()
+                .value_of("label-prefix")
         ),
         Some("dump") => dump_objects(
             &session,
