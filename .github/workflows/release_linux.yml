@@ -135,3 +135,130 @@ jobs:
         with:
           name: yubihsm-setup-ubuntu2004-amd64
           path: artifact
+
+  debian_based:
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [
+          "ubuntu:23.04",
+          "ubuntu:22.04",
+          "ubuntu:20.04",
+          "ubuntu:18.04"
+          "debian:12",
+          "debian:11",
+        ]
+        libyubihsm_tag : [ "2.4.0" ]
+
+    name: build on ${{ matrix.environment }}
+    runs-on: ubuntu-latest
+    container: ${{ matrix.environment }}
+
+    steps:
+
+      - name: clone the Yubico/yubihsm-setup repository
+        uses: actions/checkout@v3
+        with:
+          path: yubihsm-setup
+
+      - name: extract platform name
+        env:
+          DOCKER_IMAGE: ${{ matrix.environment }}
+        run: |
+          # Remove everything from DOCKER_IMAGE that is not a letter or a number
+          PLATFORM=$(echo -n "$DOCKER_IMAGE" | sed -E 's/[^a-zA-Z0-9]//g')
+          echo "PLATFORM=$PLATFORM" >> $GITHUB_ENV
+
+      - name: install dependencies from package management
+        env:
+          CC: ${{ matrix.cc }}
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+
+          apt-get update && apt-get dist-upgrade -y
+          apt-get install -y build-essential      \
+                                  chrpath              \
+                                  cmake                \
+                                  pkg-config           \
+                                  gengetopt            \
+                                  help2man             \
+                                  libedit-dev          \
+                                  libcurl4-openssl-dev \
+                                  liblzma-dev          \
+                                  libssl-dev           \
+                                  libseccomp-dev       \
+                                  libusb-1.0.0-dev     \
+                                  dh-exec              \
+                                  git-buildpackage     \
+                                  curl                 \
+                                  libpcsclite-dev      \
+                                  file                 \
+                                  curl                 \
+                                  jq
+          
+          export PATH=$PATH:~/.cargo/bin
+          curl -o rustup.sh https://sh.rustup.rs
+          bash ./rustup.sh -y
+          cargo install cargo-deb
+
+      - name: install libyubihsm
+        working-directory: yubihsm-setup
+        env:
+          LIBYUBIHSM_TAG: ${{ matrix.libyubihsm_tag }}
+        run: |
+          cd ..
+          
+          git clone --branch $LIBYUBIHSM_TAG https://github.com/Yubico/yubihsm-shell.git
+          cd yubihsm-shell
+          mkdir build
+          cd build
+          cmake .. -DBUILD_ONLY_LIB=ON
+          make
+
+      - name: clone yubihsmrs
+        working-directory: yubihsm-setup
+        run: |
+          set -x
+          cd ..
+          git clone https://github.com/Yubico/yubihsmrs.git
+
+      - name: Build binary
+        working-directory: yubihsm-setup
+        env:
+          PLATFORM: ${{ env.PLATFORM }}
+        run: |
+          set -x
+          OUTPUT=$GITHUB_WORKSPACE/$PLATFORM/yubihsm-setup
+          mkdir -p $OUTPUT
+
+          export PATH=$PATH:~/.cargo/bin
+          
+          YUBIHSM_LIB_DIR=$(dpkg -L libyubihsm1 | grep -e "libyubihsm.so.2$" | xargs dirname) cargo build --release
+          strip --strip-all target/release/yubihsm-setup
+          cargo deb --no-build
+          cp target/debian/*.deb $OUTPUT/
+
+          ./target/release/yubihsm-setup version
+          ./target/release/yubihsm-setup --help
+
+          LICESE_DIR="$OUTPUT/share/yubihsm-setup"
+          mkdir -p $LICESE_DIR
+          cp -r $GITHUB_WORKSPACE/yubihsm-setup/resources/release/licenses $LICESE_DIR/
+          for lf in $LICESE_DIR/licenses/*; do
+            chmod 644 $lf
+          done
+
+          cd $OUTPUT
+          rm -f yubihsm-setup-$PLATFORM-amd64.tar.gz
+          tar -C .. -zcvf ../yubihsm-setup-$PLATFORM-amd64.tar.gz yubihsm-setup
+          rm -f *.deb
+          rm -rf licenses
+          rm -rf ../yubihsm-setup
+
+
+      - name: upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: "yubihsm-setup-${{ env.PLATFORM }}-amd64"
+          path: ${{ env.PLATFORM }}
