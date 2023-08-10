@@ -4,72 +4,6 @@ on: [push]
 
 jobs:
 
-  Ubuntu1804-Build:
-    name: Ubuntu1804
-    runs-on: ubuntu-18.04
-    env:
-      YUBIHSMSDK_VERSION: 2021-08
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      # download yubihsm-sdk installer from dev.y.c and install it
-      - name: install yubihsm-shell
-        run: |
-          set -e -o pipefail
-          set -x
-
-          cd ..
-          curl -L --max-redirs 2 -o - https://developers.yubico.com/YubiHSM2/Releases/yubihsm2-sdk-$YUBIHSMSDK_VERSION-ubuntu1804-amd64.tar.gz |\
-              tar -xzvf -
-          cd yubihsm2-sdk
-          sudo dpkg -i ./libyubihsm*_amd64.deb
-
-      - name: clone yubihsmrs
-        run: |
-          set -e -o pipefail
-          set -x
-
-          cd ..
-          git clone https://github.com/Yubico/yubihsmrs.git
-
-      - name: Build yubihsm-setup
-        run: |
-          set -e -o pipefail
-          set -x
-          mkdir -p artifact/yubihsm-setup
-
-          cd ..
-          export PATH=$PATH:~/.cargo/bin
-          if [[ ! -x $(command -v rustc) ]]; then
-            curl -o rustup.sh https://sh.rustup.rs
-            bash ./rustup.sh -y
-          fi
-          cargo install cargo-deb
-
-          cd yubihsm-setup
-          YUBIHSM_LIB_DIR=$(dpkg -L libyubihsm1 | grep -e "libyubihsm.so.2$" | xargs dirname) cargo build --release
-          strip --strip-all target/release/yubihsm-setup
-          cargo deb --no-build
-          cp target/debian/*.deb artifact/yubihsm-setup/
-
-          ./target/release/yubihsm-setup --version
-          ./target/release/yubihsm-setup --help
-
-          LICENSE_DIR="artifact/yubihsm-setup/share/yubihsm-setup"
-          mkdir -p $LICENSE_DIR
-          cp -r resources/release/licenses $LICENSE_DIR/
-          for lf in $LICENSE_DIR/licenses/*; do
-            chmod 644 $lf
-          done
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v1
-        with:
-          name: yubihsm-setup-ubuntu1804-amd64
-          path: artifact
-
   Ubuntu2004-Build:
     name: Ubuntu2004
     runs-on: ubuntu-20.04
@@ -197,7 +131,10 @@ jobs:
                                   curl                 \
                                   jq
           
+          
           export PATH=$PATH:~/.cargo/bin
+          ls ~/.cargo/bin
+          
           curl -o rustup.sh https://sh.rustup.rs
           bash ./rustup.sh -y
           cargo install cargo-deb
