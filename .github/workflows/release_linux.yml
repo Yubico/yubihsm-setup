@@ -158,11 +158,7 @@ jobs:
           else
             dpkg-buildpackage
           fi
-          
-          ls ../
-          ls obj-x86_64-linux-gnu/
-          
-          sudo dpkg -i ../libyubihsm*_amd64.deb
+          dpkg -i ../libyubihsm*_amd64.deb
 
       - name: clone yubihsmrs
         working-directory: yubihsm-setup
@@ -188,7 +184,7 @@ jobs:
           cargo deb --no-build
           cp target/debian/*.deb $OUTPUT/
 
-          ./target/release/yubihsm-setup version
+          ./target/release/yubihsm-setup --version
           ./target/release/yubihsm-setup --help
 
           LICESE_DIR="$OUTPUT/share/yubihsm-setup"
