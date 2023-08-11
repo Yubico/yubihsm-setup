@@ -130,8 +130,11 @@ jobs:
                                   libpcsclite-dev      \
                                   file                 \
                                   curl                 \
-                                  jq                   \
-                                  cargo
+                                  jq
+          
+          curl -o rustup.sh https://sh.rustup.rs
+          bash ./rustup.sh -y
+          find . -name "cargo"
           
           cargo install cargo-deb
           
