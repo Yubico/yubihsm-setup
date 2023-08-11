@@ -151,6 +151,8 @@ jobs:
           cd build
           cmake .. -DBUILD_ONLY_LIB=ON
           make
+          make install
+          find / -name "libyubihsm.so*"
 
       - name: clone yubihsmrs
         working-directory: yubihsm-setup
