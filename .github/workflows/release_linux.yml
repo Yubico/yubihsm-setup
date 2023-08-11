@@ -145,12 +145,15 @@ jobs:
           PLATFORM: ${{ env.PLATFORM }}
         run: |
           set -x
+          
+          echo "platform = $PLATFORM"
+          
           cd ..
           
           git clone --branch $LIBYUBIHSM_TAG https://github.com/Yubico/yubihsm-shell.git
           cd yubihsm-shell
           
-          if [ "${PLATFORM:0:6}" = "debian" ] || [ "$PLATFORM" = "ubuntu1804" ]; then
+          if [ "$PLATFORM" = "debian11" ] || [ "$PLATFORM" = "debian12" ]  || [ "$PLATFORM" = "ubuntu1804" ]; then
             dpkg-buildpackage -b --no-sign
           else
             dpkg-buildpackage
