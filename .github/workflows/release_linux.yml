@@ -173,7 +173,7 @@ jobs:
           #YUBIHSM_LIB_DIR=$(dpkg -L libyubihsm1 | grep -e "libyubihsm.so.2$" | xargs dirname) cargo build --release
           YUBIHSM_LIB_DIR=$GITHUB_WORKSPACE/yubihsm-shell/build/lib cargo build --release
           strip --strip-all target/release/yubihsm-setup
-          YUBIHSM_LIB_DIR=$GITHUB_WORKSPACE/yubihsm-shell/build/lib cargo deb --no-build
+          LD_LIBRARY_PATH=$GITHUB_WORKSPACE/yubihsm-shell/build/lib cargo deb --no-build
           cp target/debian/*.deb $OUTPUT/
 
           ./target/release/yubihsm-setup version
