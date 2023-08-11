@@ -142,17 +142,25 @@ jobs:
         working-directory: yubihsm-setup
         env:
           LIBYUBIHSM_TAG: ${{ matrix.libyubihsm_tag }}
+          PLATFORM: ${{ env.PLATFORM }}
         run: |
           cd ..
           
           git clone --branch $LIBYUBIHSM_TAG https://github.com/Yubico/yubihsm-shell.git
           cd yubihsm-shell
-          mkdir build
-          cd build
-          cmake .. -DBUILD_ONLY_LIB=ON
-          make
-          make install
-          find / -name "libyubihsm.so*"
+          if [ "${PLATFORM:0:6}" == "debian" ] || [ "$PLATFORM" == "ubuntu1804" ]; then
+            dpkg-buildpackage -b --no-sign
+          else
+            dpkg-buildpackage
+          fi
+          
+          ls
+          
+          dpkg -i ./libyubihsm*_amd64.deb          
+          
+          ls /usr/lib/x86_64-linux-gnu
+          
+
 
       - name: clone yubihsmrs
         working-directory: yubihsm-setup
@@ -173,9 +181,9 @@ jobs:
           export PATH=$PATH:$HOME/.cargo/bin
           
           #YUBIHSM_LIB_DIR=$(dpkg -L libyubihsm1 | grep -e "libyubihsm.so.2$" | xargs dirname) cargo build --release
-          YUBIHSM_LIB_DIR=$GITHUB_WORKSPACE/yubihsm-shell/build/lib cargo build --release
+          YUBIHSM_LIB_DIR=/usr/lib/x86_64-linux-gnu cargo build --release
           strip --strip-all target/release/yubihsm-setup
-          LD_LIBRARY_PATH=$GITHUB_WORKSPACE/yubihsm-shell/build/lib cargo deb --no-build
+          cargo deb --no-build
           cp target/debian/*.deb $OUTPUT/
 
           ./target/release/yubihsm-setup version
