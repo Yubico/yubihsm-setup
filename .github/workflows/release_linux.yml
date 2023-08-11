@@ -168,16 +168,12 @@ jobs:
           OUTPUT=$GITHUB_WORKSPACE/$PLATFORM/yubihsm-setup
           mkdir -p $OUTPUT
 
-          export PATH=$PATH:~/.cargo/bin
-          
-          echo "GITHUB_WORKSPACE= $GITHUB_WORKSPACE"
-          ls $GITHUB_WORKSPACE/
-          ls $GITHUB_WORKSPACE/yubihsm-shell/build/lib
+          export PATH=$PATH:$HOME/.cargo/bin
           
           #YUBIHSM_LIB_DIR=$(dpkg -L libyubihsm1 | grep -e "libyubihsm.so.2$" | xargs dirname) cargo build --release
           YUBIHSM_LIB_DIR=$GITHUB_WORKSPACE/yubihsm-shell/build/lib cargo build --release
           strip --strip-all target/release/yubihsm-setup
-          cargo deb --no-build
+          YUBIHSM_LIB_DIR=$GITHUB_WORKSPACE/yubihsm-shell/build/lib cargo deb --no-build
           cp target/debian/*.deb $OUTPUT/
 
           ./target/release/yubihsm-setup version
