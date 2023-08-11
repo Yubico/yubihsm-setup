@@ -151,8 +151,6 @@ jobs:
           cd build
           cmake .. -DBUILD_ONLY_LIB=ON
           make
-          make install
-          find / -name "libyubihsm.so*"
 
       - name: clone yubihsmrs
         working-directory: yubihsm-setup
@@ -174,8 +172,8 @@ jobs:
           
           #YUBIHSM_LIB_DIR=$(dpkg -L libyubihsm1 | grep -e "libyubihsm.so.2$" | xargs dirname) cargo build --release
           YUBIHSM_LIB_DIR=$GITHUB_WORKSPACE/yubihsm-shell/build/lib cargo build --release
-          strip --strip-all target/release/yubihsm-setup
           LD_LIBRARY_PATH=$GITHUB_WORKSPACE/yubihsm-shell/build/lib cargo deb --no-build
+          strip --strip-all target/release/yubihsm-setup
           cp target/debian/*.deb $OUTPUT/
 
           ./target/release/yubihsm-setup version
