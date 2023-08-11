@@ -136,6 +136,9 @@ jobs:
           bash ./rustup.sh -y
           find . -name "cargo"
           
+          ls $HOME/.cargo/bin
+          export PATH=$PATH:$HOME/.cargo/bin
+          cargo version
           cargo install cargo-deb
           
 
