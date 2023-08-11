@@ -130,18 +130,8 @@ jobs:
                                   libpcsclite-dev      \
                                   file                 \
                                   curl                 \
-                                  jq
-          
-          echo "HOME = $HOME"
-          
-          export PATH=$PATH:~/.cargo/bin
-        
-          curl -o rustup.sh https://sh.rustup.rs
-          bash ./rustup.sh -y
-          source "$HOME/.cargo/env"
-          ls ~/.cargo/bin
-          echo "---------------------"
-          ls $HOME/.cargo/bin
+                                  jq                   \
+                                  cargo
           
           cargo install cargo-deb
           
