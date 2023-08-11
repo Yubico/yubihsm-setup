@@ -172,7 +172,7 @@ jobs:
           
           echo "GITHUB_WORKSPACE= $GITHUB_WORKSPACE"
           ls $GITHUB_WORKSPACE/
-          $GITHUB_WORKSPACE/yubihsm-shell/build/lib
+          ls $GITHUB_WORKSPACE/yubihsm-shell/build/lib
           
           #YUBIHSM_LIB_DIR=$(dpkg -L libyubihsm1 | grep -e "libyubihsm.so.2$" | xargs dirname) cargo build --release
           YUBIHSM_LIB_DIR=$GITHUB_WORKSPACE/yubihsm-shell/build/lib cargo build --release
