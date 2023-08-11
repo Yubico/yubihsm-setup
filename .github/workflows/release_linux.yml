@@ -133,11 +133,14 @@ jobs:
           
           
           export PATH=$PATH:~/.cargo/bin
-          ls ~/.cargo/bin
-          
+        
           curl -o rustup.sh https://sh.rustup.rs
           bash ./rustup.sh -y
+          
+          ls ~/.cargo/bin
+          
           cargo install cargo-deb
+          
 
       - name: install libyubihsm
         working-directory: yubihsm-setup
