@@ -113,8 +113,6 @@ jobs:
 
           apt-get update && apt-get dist-upgrade -y
           apt-get install -y build-essential      \
-                                  gcc                  \
-                                  g++                  \
                                   chrpath              \
                                   cmake                \
                                   pkg-config           \
@@ -174,9 +172,10 @@ jobs:
           
           echo "GITHUB_WORKSPACE= $GITHUB_WORKSPACE"
           ls $GITHUB_WORKSPACE/
+          $GITHUB_WORKSPACE/yubihsm-shell/build/lib
           
           #YUBIHSM_LIB_DIR=$(dpkg -L libyubihsm1 | grep -e "libyubihsm.so.2$" | xargs dirname) cargo build --release
-          YUBIHSM_LIB_DIR=$GITHUB_WORKSPACE/../yubihsm-shell/build/lib cargo build --release
+          YUBIHSM_LIB_DIR=$GITHUB_WORKSPACE/yubihsm-shell/build/lib cargo build --release
           strip --strip-all target/release/yubihsm-setup
           cargo deb --no-build
           cp target/debian/*.deb $OUTPUT/
