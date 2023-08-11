@@ -108,6 +108,7 @@ jobs:
           CC: ${{ matrix.cc }}
           DEBIAN_FRONTEND: noninteractive
         run: |
+          set -x
           export DEBIAN_FRONTEND=noninteractive
 
           apt-get update && apt-get dist-upgrade -y
@@ -131,13 +132,16 @@ jobs:
                                   curl                 \
                                   jq
           
+          echo "HOME = $HOME"
           
           export PATH=$PATH:~/.cargo/bin
         
           curl -o rustup.sh https://sh.rustup.rs
           bash ./rustup.sh -y
-          
+          source "$HOME/.cargo/env"
           ls ~/.cargo/bin
+          echo "---------------------"
+          ls $HOME/.cargo/bin
           
           cargo install cargo-deb
           
