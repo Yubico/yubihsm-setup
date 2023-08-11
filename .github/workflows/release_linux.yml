@@ -103,7 +103,7 @@ jobs:
           PLATFORM=$(echo -n "$DOCKER_IMAGE" | sed -E 's/[^a-zA-Z0-9]//g')
           echo "PLATFORM=$PLATFORM" >> $GITHUB_ENV
 
-      - name: install dependencies from package management
+      - name: install dependencies
         env:
           CC: ${{ matrix.cc }}
           DEBIAN_FRONTEND: noninteractive
@@ -113,6 +113,8 @@ jobs:
 
           apt-get update && apt-get dist-upgrade -y
           apt-get install -y build-essential      \
+                                  gcc                  \
+                                  g++                  \
                                   chrpath              \
                                   cmake                \
                                   pkg-config           \
@@ -134,11 +136,7 @@ jobs:
           
           curl -o rustup.sh https://sh.rustup.rs
           bash ./rustup.sh -y
-          find . -name "cargo"
-          
-          ls $HOME/.cargo/bin
           export PATH=$PATH:$HOME/.cargo/bin
-          cargo version
           cargo install cargo-deb
           
 
