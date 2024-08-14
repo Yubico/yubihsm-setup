@@ -78,11 +78,10 @@ jobs:
           "ubuntu:23.04",
           "ubuntu:22.04",
           "ubuntu:20.04",
-          "ubuntu:18.04",
           "debian:12",
           "debian:11",
         ]
-        libyubihsm_tag : [ "2.4.0" ]
+        libyubihsm_tag : [ "2.5.0" ]
 
     name: build on ${{ matrix.environment }}
     runs-on: ubuntu-latest
@@ -150,7 +149,8 @@ jobs:
           
           cd ..
           
-          git clone --branch $LIBYUBIHSM_TAG https://github.com/Yubico/yubihsm-shell.git
+          #git clone --branch $LIBYUBIHSM_TAG https://github.com/Yubico/yubihsm-shell.git
+          git clone https://github.com/Yubico/yubihsm-shell.git
           cd yubihsm-shell
           
           if [ "$PLATFORM" = "debian11" ] || [ "$PLATFORM" = "ubuntu1804" ]; then
@@ -201,6 +201,81 @@ jobs:
           rm -rf licenses
           rm -rf ../yubihsm-setup
 
+
+      - name: upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: "yubihsm-setup-${{ env.PLATFORM }}-amd64"
+          path: ${{ env.PLATFORM }}
+
+  redhat_based:
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [
+          "fedora:39",
+          "fedora:40",
+        ]
+
+    name: build on ${{ matrix.environment }}
+    runs-on: ubuntu-latest
+    container: ${{ matrix.environment }}
+
+    steps:
+
+      - name: clone the Yubico/yubihsm-setup repository
+        uses: actions/checkout@v3
+        with:
+          path: yubihsm-setup
+
+      - name: extract platform name
+        env:
+          DOCKER_IMAGE: ${{ matrix.environment }}
+        run: |
+          # Remove everything from DOCKER_IMAGE that is not a letter or a number
+          PLATFORM=$(echo -n "$DOCKER_IMAGE" | sed -E 's/[^a-zA-Z0-9]//g')
+          echo "PLATFORM=$PLATFORM" >> $GITHUB_ENV
+
+      - name: install dependencies
+        env:
+          PLATFORM: ${{ env.PLATFORM }}
+        run: |
+          dnf -y update
+          dnf -y install  binutils         \
+                          git              \
+                          cmake            \
+                          openssl-devel    \
+                          libusb1-devel     \
+                          libcurl-devel    \
+                          rpmdevtools      \
+                          pcsc-lite-devel
+          
+          curl -o rustup.sh https://sh.rustup.rs
+          bash ./rustup.sh -y
+
+      - name: install libyubihsm
+        run: |
+          git clone https://github.com/Yubico/yubihsm-shell.git
+          cd yubihsm-shell
+            mkdir build
+            cd build
+            cmake .. -DBUILD_ONLY_LIB=ON
+            make
+
+      - name: clone yubihsmrs
+        run: |
+          git clone https://github.com/Yubico/yubihsmrs.git          
+
+      - name: build release binary
+        working-directory: yubihsm-setup
+        env:
+          PLATFORM: ${{ env.PLATFORM }}
+        run: |
+          cargo install cargo-rpm
+          cargo rpm init
+          YUBIHSM_LIB_DIR=$GITHUB_WORKSPACE/yubihsm-shell/build/lib cargo build --release
+          YUBIHSM_LIB_DIR=$GITHUB_WORKSPACE/yubihsm-shell-$LIBYUBIHSM_VERSION/build/lib cargo rpm build
+          cp target/release/rpmbuild/RPMS/x86_64/*.rpm $GITHUB_WORKSPACE/$PLATFORM/yubihsm-setup/
 
       - name: upload artifacts
         uses: actions/upload-artifact@v3
