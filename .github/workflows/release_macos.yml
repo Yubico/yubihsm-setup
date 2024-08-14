@@ -41,6 +41,7 @@ jobs:
 
       - name: install libyubihsm
         run: |
+          cd ..
           git clone https://github.com/Yubico/yubihsm-shell.git
           cd yubihsm-shell
             mkdir build
@@ -50,15 +51,15 @@ jobs:
 
       - name: clone yubihsmrs
         run: |
+          cd ..
           git clone https://github.com/Yubico/yubihsmrs.git
 
       - name: Build yubihsm-setup
         run: |
           set -e -o pipefail
           set -x
-          mkdir artifact
+          mkdir $GITHUB_WORKSPACE/artifact
 
-          cd yubihsm-setup
           RUSTFLAGS="-C link-args=-Wl,-rpath,\$ORIGIN/../lib"  YUBIHSM_LIB_DIR=$GITHUB_WORKSPACE/yubihsm-shell/build/lib cargo build --release
           strip -u -r target/release/yubihsm-setup
           install target/release/yubihsm-setup ../artifact
