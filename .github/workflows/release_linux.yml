@@ -209,6 +209,13 @@ jobs:
         env:
           PLATFORM: ${{ env.PLATFORM }}
         run: |
+          
+          export PATH=$PATH:~/.cargo/bin
+          if [[ ! -x $(command -v rustc) ]]; then
+            curl -o rustup.sh https://sh.rustup.rs
+            bash ./rustup.sh -y
+          fi
+          
           cargo install cargo-rpm
           cargo rpm init
           YUBIHSM_LIB_DIR=$GITHUB_WORKSPACE/yubihsm-shell/build/lib cargo build --release
