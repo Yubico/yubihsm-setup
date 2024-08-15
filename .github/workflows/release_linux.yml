@@ -87,7 +87,12 @@ jobs:
           git clone https://github.com/Yubico/yubihsm-shell.git
           cd yubihsm-shell
           
-          if [ "$PLATFORM" = "debian11" ] || [ "$PLATFORM" = "ubuntu1804" ]; then
+          if [ "$PLATFORM" = "ubuntu2404" ]; then
+            # ubuntu 24.04 comes with _FORTIFY_SOURCE already set
+            sed -i 's/add_definitions (-D_FORTIFY_SOURCE=2)/add_definitions (-D_FORTIFY_SOURCE=3)/' cmake/SecurityFlags.cmake
+          fi
+          
+          if [ "$PLATFORM" = "debian11" ]; then
             dpkg-buildpackage -b --no-sign
           else
             dpkg-buildpackage

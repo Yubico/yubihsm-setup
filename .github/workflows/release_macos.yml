@@ -42,6 +42,8 @@ jobs:
           cmake .. -DBUILD_ONLY_LIB=ON
           make
           pwd
+          echo $GITHUB_WORKSPACE
+          ls $GITHUB_WORKSPACE/yubihsm-setup/yubihsm-shell/build/lib
 
       - name: clone yubihsmrs
         run: |
