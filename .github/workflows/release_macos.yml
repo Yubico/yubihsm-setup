@@ -63,11 +63,6 @@ jobs:
           strip -u -r target/release/yubihsm-setup
           install target/release/yubihsm-setup ../artifact
 
-          otool -L target/release/yubihsm-setup
-
-          ./target/release/yubihsm-setup --version
-          ./target/release/yubihsm-setup --help
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
