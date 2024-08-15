@@ -37,10 +37,11 @@ jobs:
           cd ..
           git clone https://github.com/Yubico/yubihsm-shell.git
           cd yubihsm-shell
-            mkdir build
-            cd build
-            cmake .. -DBUILD_ONLY_LIB=ON
-            make
+          mkdir build
+          cd build
+          cmake .. -DBUILD_ONLY_LIB=ON
+          make
+          pwd
 
       - name: clone yubihsmrs
         run: |

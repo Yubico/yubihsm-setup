@@ -9,7 +9,7 @@ jobs:
       fail-fast: false
       matrix:
         environment: [
-          "ubuntu:23.04",
+          "ubuntu:24.04",
           "ubuntu:22.04",
           "ubuntu:20.04",
           "debian:12",
@@ -216,11 +216,14 @@ jobs:
             bash ./rustup.sh -y
           fi
           
+          OUTPUT=$GITHUB_WORKSPACE/$PLATFORM/yubihsm-setup
+          mkdir -p $OUTPUT
+          
           cargo install cargo-rpm
           cargo rpm init
           YUBIHSM_LIB_DIR=$GITHUB_WORKSPACE/yubihsm-shell/build/lib cargo build --release
           YUBIHSM_LIB_DIR=$GITHUB_WORKSPACE/yubihsm-shell-$LIBYUBIHSM_VERSION/build/lib cargo rpm build
-          cp target/release/rpmbuild/RPMS/x86_64/*.rpm $GITHUB_WORKSPACE/$PLATFORM/yubihsm-setup/
+          cp target/release/rpmbuild/RPMS/x86_64/*.rpm $OUTPUT/
 
       - name: upload artifacts
         uses: actions/upload-artifact@v3
