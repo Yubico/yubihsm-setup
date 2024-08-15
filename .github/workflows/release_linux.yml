@@ -4,134 +4,234 @@ on: [push]
 
 jobs:
 
-  Ubuntu1804-Build:
-    name: Ubuntu1804
-    runs-on: ubuntu-18.04
-    env:
-      YUBIHSMSDK_VERSION: 2021-08
+  debian_based:
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [
+          "ubuntu:24.04",
+          "ubuntu:22.04",
+          "ubuntu:20.04",
+          "debian:12",
+          "debian:11",
+        ]
+        libyubihsm_tag : [ "2.5.0" ]
+
+    name: build on ${{ matrix.environment }}
+    runs-on: ubuntu-latest
+    container: ${{ matrix.environment }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
 
-      # download yubihsm-sdk installer from dev.y.c and install it
-      - name: install yubihsm-shell
-        run: |
-          set -e -o pipefail
-          set -x
-
-          cd ..
-          curl -L --max-redirs 2 -o - https://developers.yubico.com/YubiHSM2/Releases/yubihsm2-sdk-$YUBIHSMSDK_VERSION-ubuntu1804-amd64.tar.gz |\
-              tar -xzvf -
-          cd yubihsm2-sdk
-          sudo dpkg -i ./libyubihsm*_amd64.deb
-
-      - name: clone yubihsmrs
-        run: |
-          set -e -o pipefail
-          set -x
-
-          cd ..
-          git clone https://github.com/Yubico/yubihsmrs.git
-
-      - name: Build yubihsm-setup
-        run: |
-          set -e -o pipefail
-          set -x
-          mkdir -p artifact/yubihsm-setup
-
-          cd ..
-          export PATH=$PATH:~/.cargo/bin
-          if [[ ! -x $(command -v rustc) ]]; then
-            curl -o rustup.sh https://sh.rustup.rs
-            bash ./rustup.sh -y
-          fi
-          cargo install cargo-deb
-
-          cd yubihsm-setup
-          YUBIHSM_LIB_DIR=$(dpkg -L libyubihsm1 | grep -e "libyubihsm.so.2$" | xargs dirname) cargo build --release
-          strip --strip-all target/release/yubihsm-setup
-          cargo deb --no-build
-          cp target/debian/*.deb artifact/yubihsm-setup/
-
-          ./target/release/yubihsm-setup --version
-          ./target/release/yubihsm-setup --help
-
-          LICENSE_DIR="artifact/yubihsm-setup/share/yubihsm-setup"
-          mkdir -p $LICENSE_DIR
-          cp -r resources/release/licenses $LICENSE_DIR/
-          for lf in $LICENSE_DIR/licenses/*; do
-            chmod 644 $lf
-          done
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v1
+      - name: clone the Yubico/yubihsm-setup repository
+        uses: actions/checkout@v3
         with:
-          name: yubihsm-setup-ubuntu1804-amd64
-          path: artifact
+          path: yubihsm-setup
 
-  Ubuntu2004-Build:
-    name: Ubuntu2004
-    runs-on: ubuntu-20.04
-    env:
-      YUBIHSMSDK_VERSION: 2021-08
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      # download yubihsm-sdk installer from dev.y.c and install it
-      - name: install yubihsm-shell
+      - name: extract platform name
+        env:
+          DOCKER_IMAGE: ${{ matrix.environment }}
         run: |
-          set -e -o pipefail
-          set -x
+          # Remove everything from DOCKER_IMAGE that is not a letter or a number
+          PLATFORM=$(echo -n "$DOCKER_IMAGE" | sed -E 's/[^a-zA-Z0-9]//g')
+          echo "PLATFORM=$PLATFORM" >> $GITHUB_ENV
 
-          cd ..
-          curl -L --max-redirs 2 -o - https://developers.yubico.com/YubiHSM2/Releases/yubihsm2-sdk-$YUBIHSMSDK_VERSION-ubuntu2004-amd64.tar.gz |\
-              tar -xzvf -
-          cd yubihsm2-sdk
-          sudo dpkg -i ./libyubihsm*_amd64.deb
-
-      - name: clone yubihsmrs
+      - name: install dependencies
+        env:
+          CC: ${{ matrix.cc }}
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          set -e -o pipefail
           set -x
+          export DEBIAN_FRONTEND=noninteractive
 
-          cd ..
-          git clone https://github.com/Yubico/yubihsmrs.git
-
-      - name: Build yubihsm-setup
-        run: |
-          set -e -o pipefail
-          set -x
-          mkdir -p artifact/yubihsm-setup
-
-          cd ..
-          export PATH=$PATH:~/.cargo/bin
-          if [[ ! -x $(command -v rustc) ]]; then
-            curl -o rustup.sh https://sh.rustup.rs
-            bash ./rustup.sh -y
-          fi
-          cargo install cargo-deb
-
-          cd yubihsm-setup
-          YUBIHSM_LIB_DIR=$(dpkg -L libyubihsm1 | grep -e "libyubihsm.so.2$" | xargs dirname) cargo build --release
-          strip --strip-all target/release/yubihsm-setup
-          cargo deb --no-build
-          cp target/debian/*.deb artifact/yubihsm-setup/
-
-          ./target/release/yubihsm-setup --version
-          ./target/release/yubihsm-setup --help
+          apt-get update && apt-get dist-upgrade -y
+          apt-get install -y build-essential      \
+                                  chrpath              \
+                                  cmake                \
+                                  pkg-config           \
+                                  gengetopt            \
+                                  help2man             \
+                                  libedit-dev          \
+                                  libcurl4-openssl-dev \
+                                  liblzma-dev          \
+                                  libssl-dev           \
+                                  libseccomp-dev       \
+                                  libusb-1.0.0-dev     \
+                                  dh-exec              \
+                                  git-buildpackage     \
+                                  curl                 \
+                                  libpcsclite-dev      \
+                                  file                 \
+                                  curl                 \
+                                  jq
           
-          LICENSE_DIR="artifact/yubihsm-setup/share/yubihsm-setup"
-          mkdir -p $LICENSE_DIR
-          cp -r resources/release/licenses $LICENSE_DIR/
-          for lf in $LICENSE_DIR/licenses/*; do
+          curl -o rustup.sh https://sh.rustup.rs
+          bash ./rustup.sh -y
+          export PATH=$PATH:$HOME/.cargo/bin
+          cargo install cargo-deb
+          
+
+      - name: install libyubihsm
+        working-directory: yubihsm-setup
+        env:
+          LIBYUBIHSM_TAG: ${{ matrix.libyubihsm_tag }}
+          PLATFORM: ${{ env.PLATFORM }}
+        run: |
+          set -x
+          
+          echo "platform = $PLATFORM"
+          
+          cd ..
+          
+          #git clone --branch $LIBYUBIHSM_TAG https://github.com/Yubico/yubihsm-shell.git
+          git clone https://github.com/Yubico/yubihsm-shell.git
+          cd yubihsm-shell
+          
+          if [ "$PLATFORM" = "ubuntu2404" ]; then
+            # ubuntu 24.04 comes with _FORTIFY_SOURCE already set
+            sed -i 's/add_definitions (-D_FORTIFY_SOURCE=2)/add_definitions (-D_FORTIFY_SOURCE=3)/' cmake/SecurityFlags.cmake
+          fi
+          
+          if [ "$PLATFORM" = "debian11" ]; then
+            dpkg-buildpackage -b --no-sign
+          else
+            dpkg-buildpackage
+          fi
+          dpkg -i ../libyubihsm*_amd64.deb
+
+      - name: clone yubihsmrs
+        working-directory: yubihsm-setup
+        run: |
+          set -x
+          cd ..
+          git clone https://github.com/Yubico/yubihsmrs.git
+
+      - name: Build binary
+        working-directory: yubihsm-setup
+        env:
+          PLATFORM: ${{ env.PLATFORM }}
+        run: |
+          set -x
+          OUTPUT=$GITHUB_WORKSPACE/$PLATFORM/yubihsm-setup
+          mkdir -p $OUTPUT
+
+          export PATH=$PATH:$HOME/.cargo/bin
+          
+          #YUBIHSM_LIB_DIR=$(dpkg -L libyubihsm1 | grep -e "libyubihsm.so.2$" | xargs dirname) cargo build --release
+          YUBIHSM_LIB_DIR=/usr/lib/x86_64-linux-gnu  cargo build --release
+          strip --strip-all target/release/yubihsm-setup
+          cargo deb --no-build
+          cp target/debian/*.deb $OUTPUT/
+
+          ./target/release/yubihsm-setup --version
+          ./target/release/yubihsm-setup --help
+
+          LICESE_DIR="$OUTPUT/share/yubihsm-setup"
+          mkdir -p $LICESE_DIR
+          cp -r $GITHUB_WORKSPACE/yubihsm-setup/resources/release/licenses $LICESE_DIR/
+          for lf in $LICESE_DIR/licenses/*; do
             chmod 644 $lf
           done
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v1
+          cd $OUTPUT
+          rm -f yubihsm-setup-$PLATFORM-amd64.tar.gz
+          tar -C .. -zcvf ../yubihsm-setup-$PLATFORM-amd64.tar.gz yubihsm-setup
+          rm -f *.deb
+          rm -rf licenses
+          rm -rf ../yubihsm-setup
+
+
+      - name: upload artifacts
+        uses: actions/upload-artifact@v3
         with:
-          name: yubihsm-setup-ubuntu2004-amd64
-          path: artifact
+          name: "yubihsm-setup-${{ env.PLATFORM }}-amd64"
+          path: ${{ env.PLATFORM }}
+
+  redhat_based:
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [
+          "fedora:39",
+          "fedora:40",
+        ]
+
+    name: build on ${{ matrix.environment }}
+    runs-on: ubuntu-latest
+    container: ${{ matrix.environment }}
+
+    steps:
+
+      - name: clone the Yubico/yubihsm-setup repository
+        uses: actions/checkout@v3
+        with:
+          path: yubihsm-setup
+
+      - name: extract platform name
+        env:
+          DOCKER_IMAGE: ${{ matrix.environment }}
+        run: |
+          # Remove everything from DOCKER_IMAGE that is not a letter or a number
+          PLATFORM=$(echo -n "$DOCKER_IMAGE" | sed -E 's/[^a-zA-Z0-9]//g')
+          echo "PLATFORM=$PLATFORM" >> $GITHUB_ENV
+
+      - name: install dependencies
+        env:
+          PLATFORM: ${{ env.PLATFORM }}
+        run: |
+          dnf -y update
+          dnf -y install  binutils         \
+                          gcc              \
+                          gcc-c++          \
+                          git              \
+                          chrpath          \
+                          cmake            \
+                          openssl-devel    \
+                          libedit-devel    \
+                          libcurl-devel    \
+                          rpmdevtools      \
+                          pcsc-lite-devel  \
+                          libusb1-devel    \
+          
+          curl -o rustup.sh https://sh.rustup.rs
+          bash ./rustup.sh -y
+
+      - name: install libyubihsm
+        run: |
+          git clone https://github.com/Yubico/yubihsm-shell.git
+          cd yubihsm-shell
+            mkdir build
+            cd build
+            cmake .. -DBUILD_ONLY_LIB=ON
+            make
+
+      - name: clone yubihsmrs
+        run: |
+          git clone https://github.com/Yubico/yubihsmrs.git          
+
+      - name: build release binary
+        working-directory: yubihsm-setup
+        env:
+          PLATFORM: ${{ env.PLATFORM }}
+        run: |
+          
+          export PATH=$PATH:~/.cargo/bin
+          if [[ ! -x $(command -v rustc) ]]; then
+            curl -o rustup.sh https://sh.rustup.rs
+            bash ./rustup.sh -y
+          fi
+          
+          OUTPUT=$GITHUB_WORKSPACE/$PLATFORM/yubihsm-setup
+          mkdir -p $OUTPUT
+          
+          cargo install cargo-rpm
+          cargo rpm init
+          YUBIHSM_LIB_DIR=$GITHUB_WORKSPACE/yubihsm-shell/build/lib cargo build --release
+          YUBIHSM_LIB_DIR=$GITHUB_WORKSPACE/yubihsm-shell-$LIBYUBIHSM_VERSION/build/lib cargo rpm build
+          cp target/release/rpmbuild/RPMS/x86_64/*.rpm $OUTPUT/
+
+      - name: upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: "yubihsm-setup-${{ env.PLATFORM }}-amd64"
+          path: ${{ env.PLATFORM }}

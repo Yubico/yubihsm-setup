@@ -3,7 +3,7 @@ set -e -o pipefail
 set -x
 
 PLATFORM=$1
-LIBYUBIHSM_VERSION="2.2.0" # To download the latest released version of yubihsm-shell
+LIBYUBIHSM_VERSION="2.4.0" # To download the latest released version of yubihsm-shell
 
 if [ "$PLATFORM" == "centos7" ]; then
   sudo yum -y install centos-release-scl
@@ -37,12 +37,13 @@ elif [ "$PLATFORM" == "centos8" ]; then
 elif [ "${PLATFORM:0:6}" == "fedora" ]; then
   sudo dnf -y update
   sudo dnf -y install binutils         \
-                    git              \
-                    cmake            \
-                    openssl-devel    \
-                    libusb-devel     \
-                    libcurl-devel    \
-                    rpmdevtools
+                      git              \
+                      cmake            \
+                      openssl-devel    \
+                      libusb1-devel     \
+                      libcurl-devel    \
+                      rpmdevtools      \
+                      pcsc-lite-devel
 
   export CMAKE="cmake"
 fi
@@ -61,16 +62,24 @@ mkdir -p $OUTPUT
 
 pushd "/tmp" &>/dev/null
   # build yubihsm-shell from source
-  rm -rf yubihsm-shell-$LIBYUBIHSM_VERSION
-  curl -L --max-redirs 2 -o - https://developers.yubico.com/yubihsm-shell/Releases/yubihsm-shell-$LIBYUBIHSM_VERSION.tar.gz |\
-      tar -xzvf -
-  pushd "yubihsm-shell-$LIBYUBIHSM_VERSION" &>/dev/null
-    mkdir build
-    pushd "build" &>/dev/null
-    $CMAKE .. -DBUILD_ONLY_LIB=ON
-    make
-    popd &>/dev/null
-  popd &>/dev/null
+  #rm -rf yubihsm-shell-$LIBYUBIHSM_VERSION
+  #curl -L --max-redirs 2 -o - https://developers.yubico.com/yubihsm-shell/Releases/yubihsm-shell-$LIBYUBIHSM_VERSION.tar.gz |\
+  #    tar -xzvf -
+
+  #git clone https://github.com/Yubico/yubihsm-shell.git
+  #cp -r /shared/resources/yubihsm-shell .
+  #pushd "yubihsm-shell-$LIBYUBIHSM_VERSION" &>/dev/null
+  #pushd "yubihsm-shell" &>/dev/null
+  #  mkdir build
+  #  pushd "build" &>/dev/null
+  #    $CMAKE .. -DBUILD_ONLY_LIB=ON
+  #    make
+  #  popd &>/dev/null
+  #popd &>/dev/null
+
+  sudo dnf -y install yubihsm-shell-2.4.1-1.fc38.x86_64.rpm
+  sudo dnf -y install yubihsm-devel-2.4.1-1.fc38.x86_64.rpm
+
 
   # install yubihsmrs
   rm -rf yubihsmrs
@@ -82,8 +91,12 @@ pushd "/tmp" &>/dev/null
   pushd "yubihsm-setup" &>/dev/null
     cargo install cargo-rpm
     cargo rpm init
-    YUBIHSM_LIB_DIR=/tmp/yubihsm-shell-$LIBYUBIHSM_VERSION/build/lib cargo build --release
-    YUBIHSM_LIB_DIR=/tmp/yubihsm-shell-$LIBYUBIHSM_VERSION/build/lib cargo rpm build
+    #YUBIHSM_LIB_DIR=/tmp/yubihsm-shell-$LIBYUBIHSM_VERSION/build/lib cargo build --release
+    #YUBIHSM_LIB_DIR=/tmp/yubihsm-shell-$LIBYUBIHSM_VERSION/build/lib cargo rpm build
+    #YUBIHSM_LIB_DIR=/tmp/yubihsm-shell/build/lib cargo build --release
+    #YUBIHSM_LIB_DIR=/tmp/yubihsm-shell/build/lib cargo rpm build
+    cargo build --release
+    cargo rpm build
     cp target/release/rpmbuild/RPMS/x86_64/*.rpm $OUTPUT
   popd &>/dev/null
 popd &>/dev/null

@@ -8,18 +8,32 @@ Vagrant.configure("2") do |config|
     v.cpus = 2
   end
 
-  config.vm.define "fedora33" do |fedora33|
-    fedora33.vm.box = "generic/fedora33"
-    fedora33.vm.synced_folder "../..", "/shared", type: "rsync",
+  config.vm.define "fedora35" do |fedora35|
+    fedora35.vm.box = "generic/fedora35"
+    fedora35.vm.synced_folder "../..", "/shared", type: "rsync",
       rsync__args: ["--verbose", "--archive", "-z", "--delete"]
-    fedora33.vm.provision "shell", :path => "build-rpm.sh", :args => "fedora33", :privileged => false
+    fedora35.vm.provision "shell", :path => "build-rpm.sh", :args => "fedora35", :privileged => false
   end
 
-  config.vm.define "fedora34" do |fedora34|
-    fedora34.vm.box = "messyzone/fedora34"
-    fedora34.vm.synced_folder "../..", "/shared", type: "rsync",
+  config.vm.define "fedora36" do |fedora36|
+    fedora36.vm.box = "generic/fedora36"
+    fedora36.vm.synced_folder "../..", "/shared", type: "rsync",
       rsync__args: ["--verbose", "--archive", "-z", "--delete"]
-    fedora34.vm.provision "shell", :path => "build-rpm.sh", :args => "fedora34", :privileged => false
+    fedora36.vm.provision "shell", :path => "build-rpm.sh", :args => "fedora36", :privileged => false
+  end
+
+  config.vm.define "fedora37" do |fedora37|
+    fedora37.vm.box = "generic/fedora37"
+    fedora37.vm.synced_folder "../..", "/shared", type: "rsync",
+      rsync__args: ["--verbose", "--archive", "-z", "--delete"]
+    fedora37.vm.provision "shell", :path => "build-rpm.sh", :args => "fedora37", :privileged => false
+  end
+
+  config.vm.define "fedora38" do |fedora38|
+    fedora38.vm.box = "fedora/38-cloud-base"
+    fedora38.vm.synced_folder "../..", "/shared", type: "rsync",
+      rsync__args: ["--verbose", "--archive", "-z", "--delete"]
+    fedora38.vm.provision "shell", :path => "build-rpm.sh", :args => "fedora38", :privileged => false
   end
 
   config.vm.define "centos7" do |centos7|
@@ -29,12 +43,12 @@ Vagrant.configure("2") do |config|
     centos7.vm.provision "shell", :path => "build-rpm.sh", :args => "centos7", :privileged => false
   end
 
-  config.vm.define "centos8" do |centos8|
-    centos8.vm.box = "zyz/centos8"
-    centos8.vm.synced_folder "../..", "/shared", type: "rsync",
-      rsync__args: ["--verbose", "--archive", "-z", "--copy-links"]
-    centos8.vm.provision "shell", :path => "build-rpm.sh", :args => "centos8", :privileged => false
-  end
+#  config.vm.define "centos8" do |centos8|
+#    centos8.vm.box = "zyz/centos8"
+#    centos8.vm.synced_folder "../..", "/shared", type: "rsync",
+#      rsync__args: ["--verbose", "--archive", "-z", "--copy-links"]
+#    centos8.vm.provision "shell", :path => "build-rpm.sh", :args => "centos8", :privileged => false
+#  end
 
   config.vm.define "debian9" do |debian9|
     debian9.vm.box = "roboxes/debian9"
@@ -50,7 +64,7 @@ Vagrant.configure("2") do |config|
   end
 
   config.vm.define "debian11" do |debian11|
-    debian11.vm.box = "axcxl/debian11_xfce"
+    debian11.vm.box = "debian/bullseye64"
     debian11.vm.synced_folder "../..", "/shared", type: "rsync",
       rsync__args: ["--verbose", "--archive", "-z", "--delete"]
     debian11.vm.provision "shell", :path => "build-pkg.sh", :args => "debian11", :privileged => false
@@ -82,11 +96,39 @@ Vagrant.configure("2") do |config|
     focal.vm.provision "shell", :path => "build-pkg.sh", :args => "ubuntu2004", :privileged => false
   end
 
-  config.vm.define "hirsute" do |hirsute|
-    hirsute.vm.box = "ubuntu/hirsute64"
-    hirsute.vm.synced_folder "../..", "/shared", type: "rsync",
+  config.vm.define "impish" do |impish|
+    impish.vm.box = "ubuntu/impish64"
+    impish.vm.synced_folder "../..", "/shared", type: "rsync",
       rsync__args: ["--verbose", "--archive", "-z", "--copy-links"]
-    hirsute.vm.provision "shell", :path => "build-pkg.sh", :args => "ubuntu2104", :privileged => false
+    impish.vm.provision "shell", :path => "build-pkg.sh", :args => "ubuntu2110", :privileged => false
+  end
+
+  config.vm.define "jammy" do |jammy|
+    jammy.vm.box = "alvistack/ubuntu-22.04"
+    jammy.vm.synced_folder "../..", "/shared", type: "rsync",
+      rsync__args: ["--verbose", "--archive", "-z", "--copy-links"]
+    jammy.vm.provision "shell", :path => "build-pkg.sh", :args => "ubuntu2204", :privileged => false
+  end
+
+  config.vm.define "kinetic" do |kinetic|
+    kinetic.vm.box = "ubuntu/kinetic64"
+    kinetic.vm.synced_folder "../..", "/shared", type: "rsync",
+      rsync__args: ["--verbose", "--archive", "-z", "--copy-links"]
+    kinetic.vm.provision "shell", :path => "build-pkg.sh", :args => "ubuntu2210", :privileged => false
+  end
+  
+  config.vm.define "lunar" do |lunar|
+    lunar.vm.box = "ubuntu/lunar64"
+    lunar.vm.synced_folder "../..", "/shared", type: "rsync",
+      rsync__args: ["--verbose", "--archive", "-z", "--copy-links"]
+    lunar.vm.provision "shell", :path => "build-pkg.sh", :args => "ubuntu2304", :privileged => false
+  end
+
+  config.vm.define "mantic" do |mantic|
+    mantic.vm.box = "ubuntu/mantic64"
+    mantic.vm.synced_folder "../..", "/shared", type: "rsync",
+      rsync__args: ["--verbose", "--archive", "-z", "--copy-links"]
+    mantic.vm.provision "shell", :path => "build-pkg.sh", :args => "ubuntu2310", :privileged => false
   end
 
 end

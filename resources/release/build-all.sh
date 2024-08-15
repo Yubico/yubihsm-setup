@@ -2,7 +2,7 @@
 
 set -e -o pipefail -x
 
-for machine in focal hirsute debian10 fedora33 fedora34 centos7 centos8; do
+for machine in focal impish jammy debian10 debian11 fedora35 fedora36 centos7; do
   vagrant box update $machine
   time vagrant up $machine
   vagrant rsync-back $machine
