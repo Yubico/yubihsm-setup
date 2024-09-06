@@ -61,7 +61,7 @@ jobs:
 
           RUSTFLAGS="-C link-args=-Wl,-rpath,\$ORIGIN/../lib"  YUBIHSM_LIB_DIR=$GITHUB_WORKSPACE/../yubihsm-shell/build/lib cargo build --release
           strip -u -r target/release/yubihsm-setup
-          install target/release/yubihsm-setup ../artifact
+          install target/release/yubihsm-setup $GITHUB_WORKSPACE/artifact
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
