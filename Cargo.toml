@@ -43,6 +43,7 @@ YubiHSM 2 for specific use cases"""
 depends = "$auto"
 section = "utility"
 priority = "optional"
+changelog = "resources/release/debian/changelog"
 assets = [
     ["target/release/yubihsm-setup", "usr/bin/", "755"],
     ["man/yubihsm-setup.1", "usr/share/man/man1/yubihsm-setup.1", "644"],
