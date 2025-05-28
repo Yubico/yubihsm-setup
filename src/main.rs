@@ -584,6 +584,7 @@ fn setup_ksp(session: &yubihsmrs::Session, previous_auth_id: u16, delete: bool, 
         ObjectCapability::ImportWrapped,
         ObjectCapability::ExportWrapped,
         ObjectCapability::ExportableUnderWrap,
+        ObjectCapability::GetOption,
     ];
 
     let mut authkey_delegated = vec![
@@ -593,6 +594,7 @@ fn setup_ksp(session: &yubihsmrs::Session, previous_auth_id: u16, delete: bool, 
         ObjectCapability::SignEcdsa,
         ObjectCapability::DeriveEcdh,
         ObjectCapability::ExportableUnderWrap,
+        ObjectCapability::GetOption,
     ];
 
     if Into::<bool>::into(get_boolean_answer(
