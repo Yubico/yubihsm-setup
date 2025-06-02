@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       # downloads and build yubihsm-shell from source release on dev.y.c
       - name: install yubihsm-shell
@@ -30,7 +30,7 @@ jobs:
           #cd yubihsm-shell-$env:LIBYUBIHSM_VERSION
           cd yubihsm-shell
           mkdir build; cd build
-          cmake -A x64 -DBUILD_ONLY_LIB=ON ..
+          cmake -A x64 -DBUILD_ONLY_LIB=ON -DENABLE_CERT_COMPRESS=OFF ..
           cmake --build .
 
       - name: clone yubihsmrs
@@ -57,7 +57,7 @@ jobs:
           install target/release/yubihsm-setup $env:GITHUB_WORKSPACE/artifact/yubihsm-setup
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: yubihsm-setup
           path: artifact

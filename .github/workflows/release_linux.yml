@@ -24,7 +24,7 @@ jobs:
     steps:
 
       - name: clone the Yubico/yubihsm-setup repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: yubihsm-setup
 
@@ -63,7 +63,8 @@ jobs:
                                   libpcsclite-dev      \
                                   file                 \
                                   curl                 \
-                                  jq
+                                  jq                   \
+                                  zlib1g-dev 
           
           curl -o rustup.sh https://sh.rustup.rs
           bash ./rustup.sh -y
@@ -142,7 +143,7 @@ jobs:
 
 
       - name: upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: "yubihsm-setup-${{ env.PLATFORM }}-amd64"
           path: ${{ env.PLATFORM }}
@@ -163,7 +164,7 @@ jobs:
     steps:
 
       - name: clone the Yubico/yubihsm-setup repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: yubihsm-setup
 
@@ -202,7 +203,7 @@ jobs:
           cd yubihsm-shell
             mkdir build
             cd build
-            cmake .. -DBUILD_ONLY_LIB=ON
+            cmake .. -DBUILD_ONLY_LIB=ON -DENABLE_CERT_COMPRESS=OFF
             make
 
       - name: clone yubihsmrs
@@ -231,7 +232,7 @@ jobs:
           cp target/release/rpmbuild/RPMS/x86_64/*.rpm $OUTPUT/
 
       - name: upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: "yubihsm-setup-${{ env.PLATFORM }}-amd64"
           path: ${{ env.PLATFORM }}
