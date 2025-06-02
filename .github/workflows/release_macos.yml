@@ -10,14 +10,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-latest
+          - os: macos-latest-large
             arch: amd
           - os: macos-latest-xlarge
             arch: arm
     env:
       VERSION: 2.6.0
       SO_VERSION: 2
-      YUBIHSMSDK_VERSION: 2021-08
+      YUBIHSMSDK_VERSION: 2024-09
 
     steps:
       - name: Checkout the Yubico/yubihsm-setup repository
@@ -29,7 +29,7 @@ jobs:
           set -x
 
           brew update
-          brew install cmake pkg-config gengetopt help2man libusb
+          brew install cmake gengetopt help2man
           brew reinstall openssl@3
 
       - name: install libyubihsm
@@ -39,7 +39,7 @@ jobs:
           cd yubihsm-shell
           mkdir build
           cd build
-          cmake .. -DBUILD_ONLY_LIB=ON
+          cmake .. -DBUILD_ONLY_LIB=ON -DENABLE_CERT_COMPRESS=OFF
           make
 
       - name: clone yubihsmrs
@@ -61,7 +61,7 @@ jobs:
 
           RUSTFLAGS="-C link-args=-Wl,-rpath,\$ORIGIN/../lib"  YUBIHSM_LIB_DIR=$GITHUB_WORKSPACE/../yubihsm-shell/build/lib cargo build --release
           strip -u -r target/release/yubihsm-setup
-          install target/release/yubihsm-setup ../artifact
+          install target/release/yubihsm-setup $GITHUB_WORKSPACE/artifact/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

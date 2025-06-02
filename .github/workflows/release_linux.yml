@@ -9,13 +9,15 @@ jobs:
       fail-fast: false
       matrix:
         environment: [
+          "ubuntu:25.04",
+          "ubuntu:24.10",
           "ubuntu:24.04",
           "ubuntu:22.04",
           "ubuntu:20.04",
           "debian:12",
           "debian:11",
         ]
-        libyubihsm_tag : [ "2.5.0" ]
+        libyubihsm_tag : [ "2.6.0" ]
 
     name: build on ${{ matrix.environment }}
     runs-on: ubuntu-latest
@@ -88,9 +90,14 @@ jobs:
           git clone https://github.com/Yubico/yubihsm-shell.git
           cd yubihsm-shell
           
-          if [ "$PLATFORM" = "ubuntu2404" ]; then
+          if [ "$PLATFORM" = "ubuntu2404" ] || [ "$PLATFORM" = "ubuntu2410" ] || [ "$PLATFORM" = "ubuntu2504" ]; then
             # ubuntu 24.04 comes with _FORTIFY_SOURCE already set
             sed -i 's/add_definitions (-D_FORTIFY_SOURCE=2)/add_definitions (-D_FORTIFY_SOURCE=3)/' cmake/SecurityFlags.cmake
+          fi
+          
+          if [ "$PLATFORM" = "ubuntu2410" ] || [ "$PLATFORM" = "ubuntu2504" ]; then
+            # Set PCSC flags
+            sed -i 's/#SET(CMAKE_C_FLAGS/SET(CMAKE_C_FLAGS/' ykhsmauth/CMakeLists.txt
           fi
           
           if [ "$PLATFORM" = "debian11" ]; then
@@ -153,8 +160,8 @@ jobs:
       fail-fast: false
       matrix:
         environment: [
-          "fedora:39",
-          "fedora:40",
+          "fedora:41",
+          "fedora:42",
         ]
 
     name: build on ${{ matrix.environment }}
