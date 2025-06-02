@@ -7,7 +7,7 @@ jobs:
 
     runs-on: windows-latest
     env:
-      LIBYUBIHSM_VERSION: 2.2.0
+      LIBYUBIHSM_VERSION: 2.6.0
 
     steps:
       - name: Checkout repository
