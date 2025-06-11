@@ -574,6 +574,7 @@ fn setup_ksp(session: &yubihsmrs::Session, previous_auth_id: u16, delete: bool, 
         ObjectCapability::ExportWrapped,
         ObjectCapability::ExportableUnderWrap,
         ObjectCapability::GetLogEntries,
+        ObjectCapability::GetOption,
     ];
 
     let mut authkey_capabilities = vec![
