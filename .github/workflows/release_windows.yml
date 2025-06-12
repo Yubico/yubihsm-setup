@@ -18,6 +18,7 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Set-PSDebug -Trace 1
+          mkdir $env:GITHUB_WORKSPACE/artifact
 
           cd ..
           #Invoke-WebRequest -Uri https://developers.yubico.com/yubihsm-shell/Releases/yubihsm-shell-$env:LIBYUBIHSM_VERSION.tar.gz -OutFile yubihsm-shell.tar.gz -UseBasicParsing
@@ -32,6 +33,12 @@ jobs:
           mkdir build; cd build
           cmake -A x64 -DBUILD_ONLY_LIB=ON -DENABLE_CERT_COMPRESS=OFF ..
           cmake --build .
+          
+          ls lib/Debug
+          
+          install lib/Debug/libyubihsm.dll $env:GITHUB_WORKSPACE/artifact/
+          install lib/Debug/libyubihsm_http.dll $env:GITHUB_WORKSPACE/artifact/
+          install lib/Debug/libyubihsm_usb.dll $env:GITHUB_WORKSPACE/artifact/
 
       - name: clone yubihsmrs
         run: |
@@ -45,7 +52,6 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Set-PSDebug -Trace 1
-          mkdir artifact
 
           rustup target add x86_64-pc-windows-gnu
           rustup default stable-x86_64-pc-windows-gnu
@@ -54,7 +60,7 @@ jobs:
           #$env:YUBIHSM_LIB_DIR="$env:GITHUB_WORKSPACE/../yubihsm-shell-$env:LIBYUBIHSM_VERSION/build/lib/Debug"
           $env:YUBIHSM_LIB_DIR="$env:GITHUB_WORKSPACE/../yubihsm-shell/build/lib/Debug"
           cargo.exe build --release
-          install target/release/yubihsm-setup $env:GITHUB_WORKSPACE/artifact/yubihsm-setup
+          install target/release/yubihsm-setup $env:GITHUB_WORKSPACE/artifact/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

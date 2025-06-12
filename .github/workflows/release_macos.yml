@@ -34,6 +34,7 @@ jobs:
 
       - name: install libyubihsm
         run: |
+          mkdir $GITHUB_WORKSPACE/artifact
           cd ..
           git clone https://github.com/Yubico/yubihsm-shell.git
           cd yubihsm-shell
@@ -41,6 +42,9 @@ jobs:
           cd build
           cmake .. -DBUILD_ONLY_LIB=ON -DENABLE_CERT_COMPRESS=OFF
           make
+          install lib/libyubihsm.2.7.0.dylib $GITHUB_WORKSPACE/artifact/
+          install lib/libyubihsm_http.2.7.0.dylib $GITHUB_WORKSPACE/artifact/
+          install lib/libyubihsm_usb.2.7.0.dylib $GITHUB_WORKSPACE/artifact/
 
       - name: clone yubihsmrs
         run: |
@@ -51,7 +55,7 @@ jobs:
         run: |
           set -e -o pipefail
           set -x
-          mkdir $GITHUB_WORKSPACE/artifact
+          
           
           export PATH=$PATH:~/.cargo/bin
           if [[ ! -x $(command -v rustc) ]]; then
@@ -59,7 +63,7 @@ jobs:
             bash ./rustup.sh -y
           fi
 
-          RUSTFLAGS="-C link-args=-Wl,-rpath,\$ORIGIN/../lib"  YUBIHSM_LIB_DIR=$GITHUB_WORKSPACE/../yubihsm-shell/build/lib cargo build --release
+          RUSTFLAGS="-C link-args=-Wl,-rpath,\@loader_path/../lib"  YUBIHSM_LIB_DIR=$GITHUB_WORKSPACE/../yubihsm-shell/build/lib cargo build --release
           strip -u -r target/release/yubihsm-setup
           install target/release/yubihsm-setup $GITHUB_WORKSPACE/artifact/
 
