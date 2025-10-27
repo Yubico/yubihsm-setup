@@ -314,11 +314,20 @@ fn split_wrapkey(
     for share in shares {
         loop {
             clear_screen();
-            println!("{}", share);
-            if Into::<bool>::into(get_boolean_answer("Have you recorded the key share?")) {
+            if Into::<bool>::into(get_boolean_answer("Are you ready to display next key share?")) {
                 break;
             }
         }
+
+        loop {
+                clear_screen();
+                println!("{}", share);
+                if Into::<bool>::into(get_boolean_answer("Have you recorded the key share?")) {
+                    break;
+                }
+            }
+
+
     }
 
     clear_screen();
