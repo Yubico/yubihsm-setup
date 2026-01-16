@@ -9,14 +9,14 @@ jobs:
       fail-fast: false
       matrix:
         environment: [
+          "ubuntu:25.10",
           "ubuntu:25.04",
           "ubuntu:24.04",
           "ubuntu:22.04",
-          "ubuntu:20.04",
           "debian:12",
-          "debian:11",
+          "debian:13",
         ]
-        libyubihsm_tag : [ "2.6.0" ]
+        libyubihsm_tag : [ "2.7.0" ]
 
     name: build on ${{ matrix.environment }}
     runs-on: ubuntu-latest
@@ -89,21 +89,18 @@ jobs:
           git clone https://github.com/Yubico/yubihsm-shell.git
           cd yubihsm-shell
           
-          if [ "$PLATFORM" = "ubuntu2404" ] || [ "$PLATFORM" = "ubuntu2410" ] || [ "$PLATFORM" = "ubuntu2504" ]; then
+          if [ "$PLATFORM" = "ubuntu2404" ] || [ "$PLATFORM" = "ubuntu2504" ] || [ "$PLATFORM" = "ubuntu2510" ]; then
             # ubuntu 24.04 comes with _FORTIFY_SOURCE already set
             sed -i 's/add_definitions (-D_FORTIFY_SOURCE=2)/add_definitions (-D_FORTIFY_SOURCE=3)/' cmake/SecurityFlags.cmake
           fi
           
-          if [ "$PLATFORM" = "ubuntu2410" ] || [ "$PLATFORM" = "ubuntu2504" ]; then
+          #if [ "$PLATFORM" = "debian13" ] || [ "$PLATFORM" = "ubuntu2504" ] || [ "$PLATFORM" = "ubuntu2510" ]; then
             # Set PCSC flags
-            sed -i 's/#SET(CMAKE_C_FLAGS/SET(CMAKE_C_FLAGS/' ykhsmauth/CMakeLists.txt
-          fi
+            #sed -i 's/#SET(CMAKE_C_FLAGS/SET(CMAKE_C_FLAGS/' ykhsmauth/CMakeLists.txt
+          #fi
           
-          if [ "$PLATFORM" = "debian11" ]; then
-            dpkg-buildpackage -b --no-sign
-          else
-            dpkg-buildpackage
-          fi
+          dpkg-buildpackage
+
           dpkg -i ../libyubihsm*_amd64.deb
 
       - name: clone yubihsmrs
@@ -129,6 +126,7 @@ jobs:
           strip --strip-all target/release/yubihsm-setup
           cargo deb --no-build
           cp target/debian/*.deb $OUTPUT/
+          cp $GITHUB_WORKSPACE/libyubihsm*_amd64.deb $OUTPUT/
 
           ./target/release/yubihsm-setup --version
           ./target/release/yubihsm-setup --help
@@ -159,9 +157,10 @@ jobs:
       fail-fast: false
       matrix:
         environment: [
-          "fedora:41",
+          "fedora:43",
           "fedora:42",
         ]
+        libyubihsm_tag : [ "2.7.0" ]
 
     name: build on ${{ matrix.environment }}
     runs-on: ubuntu-latest
@@ -204,13 +203,50 @@ jobs:
           bash ./rustup.sh -y
 
       - name: install libyubihsm
+        env:
+          LIBYUBIHSM_TAG: ${{ matrix.libyubihsm_tag }}
+          PLATFORM: ${{ env.PLATFORM }}
         run: |
+          #git clone https://github.com/Yubico/yubihsm-shell.git
+          #cd yubihsm-shell
+          #  mkdir build
+          #  cd build
+          #  cmake .. -DBUILD_ONLY_LIB=ON -DENABLE_CERT_COMPRESS=OFF
+          #  make
+          
+          echo "platform = $PLATFORM"
+          #git clone --branch $LIBYUBIHSM_TAG https://github.com/Yubico/yubihsm-shell.git
           git clone https://github.com/Yubico/yubihsm-shell.git
           cd yubihsm-shell
-            mkdir build
-            cd build
-            cmake .. -DBUILD_ONLY_LIB=ON -DENABLE_CERT_COMPRESS=OFF
-            make
+          
+          cd resources/release/linux
+          chmod +x install_redhat_dependencies.sh 
+          ./install_redhat_dependencies.sh $PLATFORM
+          yum install -y procps-ng jq file which curl findutils
+          cd ../../..
+          
+          uname -a
+          
+          export CMAKE="cmake"
+          export INPUT=$GITHUB_WORKSPACE/yubihsm-shell
+
+          # These 2 lines can be replaced by the command "rpmdev-setuptree", but this command seems to add macros that force check paths that do not exist
+          mkdir -p $GITHUB_WORKSPACE/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+          echo '%_topdir %(echo $HOME)/rpmbuild' > $GITHUB_WORKSPACE/.rpmmacros
+
+          RPM_DIR=$GITHUB_WORKSPACE/rpmbuild
+
+          cp $GITHUB_WORKSPACE/yubihsm-shell/resources/release/linux/yubihsm-shell.spec $RPM_DIR/SPECS/
+
+          QA_SKIP_BUILD_ROOT=1 QA_RPATHS=$(( 0x0001|0x0010 )) rpmbuild -bb $RPM_DIR/SPECS/yubihsm-shell.spec
+          
+          cd /github/home/rpmbuild/RPMS/x86_64
+          yum install -y ./yubihsm-devel*.rpm
+
+      - name: find libyubihsm
+        run: |
+          find / -name "*yubihsm*" -type f
+          
 
       - name: clone yubihsmrs
         run: |
@@ -222,20 +258,19 @@ jobs:
           PLATFORM: ${{ env.PLATFORM }}
         run: |
           
-          export PATH=$PATH:~/.cargo/bin
-          if [[ ! -x $(command -v rustc) ]]; then
-            curl -o rustup.sh https://sh.rustup.rs
-            bash ./rustup.sh -y
-          fi
+          find / -name libyubihsm*.so
           
+          export PATH=$PATH:~/.cargo/bin
+
           OUTPUT=$GITHUB_WORKSPACE/$PLATFORM/yubihsm-setup
           mkdir -p $OUTPUT
+          cp /github/home/rpmbuild/RPMS/x86_64/yubihsm-devel*.rpm $OUTPUT/
           
-          cargo install cargo-rpm
-          cargo rpm init
-          YUBIHSM_LIB_DIR=$GITHUB_WORKSPACE/yubihsm-shell/build/lib cargo build --release
-          YUBIHSM_LIB_DIR=$GITHUB_WORKSPACE/yubihsm-shell-$LIBYUBIHSM_VERSION/build/lib cargo rpm build
-          cp target/release/rpmbuild/RPMS/x86_64/*.rpm $OUTPUT/
+          cargo build --release
+          
+          export BIN_DIR=$GITHUB_WORKSPACE/yubihsm-setup/target/release
+          rpmbuild -bb resources/release/yubihsm-setup.spec
+          cp /github/home/rpmbuild/RPMS/x86_64/yubihsm-setup-*.rpm $OUTPUT/          
 
       - name: upload artifacts
         uses: actions/upload-artifact@v4
