@@ -15,7 +15,7 @@ jobs:
           - os: macos-latest-xlarge
             arch: arm
     env:
-      VERSION: 2.6.0
+      VERSION: 2.7.0
       SO_VERSION: 2
       YUBIHSMSDK_VERSION: 2024-09
 
