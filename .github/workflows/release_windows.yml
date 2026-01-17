@@ -46,6 +46,8 @@ jobs:
           $ErrorActionPreference = "Stop"
           Set-PSDebug -Trace 1
           mkdir artifact
+          
+          #ls $env:GITHUB_WORKSPACE/../yubihsm-shell/build/lib/Debug
 
           rustup target add x86_64-pc-windows-gnu
           rustup default stable-x86_64-pc-windows-gnu
@@ -55,6 +57,7 @@ jobs:
           $env:YUBIHSM_LIB_DIR="$env:GITHUB_WORKSPACE/../yubihsm-shell/build/lib/Debug"
           cargo.exe build --release
           install target/release/yubihsm-setup $env:GITHUB_WORKSPACE/artifact/yubihsm-setup
+          install $env:GITHUB_WORKSPACE/../yubihsm-shell/build/lib/Debug/libyubihsm*.dll $env:GITHUB_WORKSPACE/artifact/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
