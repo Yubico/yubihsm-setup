@@ -1,5 +1,5 @@
 Name:           yubihsm-setup
-Version:        2.3.3
+Version:        2.3.4
 Release:        1%{?dist}
 Summary:        Command line tool for YubiHSM 2
 License:        Apache-2.0
@@ -20,5 +20,5 @@ install -m 0755 $BIN_DIR/yubihsm-setup %{buildroot}/usr/bin/yubihsm-setup
 /usr/bin/yubihsm-setup
 
 %changelog
-* Mon Nov 03 2025 Your Name <your@email.com> - 2.3.3-1
-- Build on Fedora 43
+* Tue Jan 20 2026 Your Name <your@email.com> - 2.3.4-1
+- Clear screen after displaying every Wrap Key share
