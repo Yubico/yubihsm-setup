@@ -9,6 +9,7 @@ jobs:
       fail-fast: false
       matrix:
         environment: [
+          "ubuntu:26.04",
           "ubuntu:25.10",
           "ubuntu:25.04",
           "ubuntu:24.04",
@@ -16,7 +17,7 @@ jobs:
           "debian:12",
           "debian:13",
         ]
-        libyubihsm_tag : [ "2.7.0" ]
+        libyubihsm_tag : [ "2.7.3" ]
 
     name: build on ${{ matrix.environment }}
     runs-on: ubuntu-latest
@@ -89,12 +90,12 @@ jobs:
           git clone https://github.com/Yubico/yubihsm-shell.git
           cd yubihsm-shell
           
-          if [ "$PLATFORM" = "ubuntu2404" ] || [ "$PLATFORM" = "ubuntu2504" ] || [ "$PLATFORM" = "ubuntu2510" ]; then
+          if [ "$PLATFORM" = "ubuntu2404" ] || [ "$PLATFORM" = "ubuntu2504" ] || [ "$PLATFORM" = "ubuntu2510" ] || [ "$PLATFORM" = "ubuntu2604" ]; then
             # ubuntu 24.04 comes with _FORTIFY_SOURCE already set
             sed -i 's/add_definitions (-D_FORTIFY_SOURCE=2)/add_definitions (-D_FORTIFY_SOURCE=3)/' cmake/SecurityFlags.cmake
           fi
           
-          #if [ "$PLATFORM" = "debian13" ] || [ "$PLATFORM" = "ubuntu2504" ] || [ "$PLATFORM" = "ubuntu2510" ]; then
+          #if [ "$PLATFORM" = "debian13" ] || [ "$PLATFORM" = "ubuntu2504" ] || [ "$PLATFORM" = "ubuntu2510" ] || [ "$PLATFORM" = "ubuntu2604" ]; then
             # Set PCSC flags
             #sed -i 's/#SET(CMAKE_C_FLAGS/SET(CMAKE_C_FLAGS/' ykhsmauth/CMakeLists.txt
           #fi
@@ -108,7 +109,7 @@ jobs:
         run: |
           set -x
           cd ..
-          git clone https://github.com/Yubico/yubihsmrs.git
+          git clone --branch 2.1.4 https://github.com/Yubico/yubihsmrs.git
 
       - name: Build binary
         working-directory: yubihsm-setup
